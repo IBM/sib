@@ -92,7 +92,7 @@ If you would like to see the detailed LICENSE click [here](LICENSE).
 ## Authors 
 - Algorithm and pseudo-code: [Slonim, Friedman and Tishby (2002)](#reference)
 - First python implementation: [Daniel Hershcovich](https://danielhers.github.io/)
-- Optimization work: Assaf Toledo and Elad Venetian
+- Optimization work: Assaf Toledo and Elad Venezian
 - Maintainer: [Assaf Toledo](https://github.com/assaftibm)
 
 
