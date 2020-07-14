@@ -1,65 +1,76 @@
 <!-- This should be the location of the title of the repository, normally the short name -->
-# repo-template
+# sequential Information Bottleneck (sIB)
+
 
 <!-- Build Status, is a great thing to have at the top of your repository, it shows that you take your CI/CD as first class citizens -->
 <!-- [![Build Status](https://travis-ci.org/jjasghar/ibm-cloud-cli.svg?branch=master)](https://travis-ci.org/jjasghar/ibm-cloud-cli) -->
 
+
 <!-- Not always needed, but a scope helps the user understand in a short sentance like below, why this repo exists -->
 ## Scope
 
-The purpose of this project is to provide a template for new open source repositories.
+This project provides an optimized implementation of the text clustering algorithm "sequential Information Bottleneck" (sIB), described in [Slonim, Friedman and Tishby (2002)](https://github.com/IBM/sib/edit/master/README.md#Reference).
+The algorithm is implemented in Python and in C++. The project is packaged as a python library with access to the C++ implementation using a Cython wrapper.
+
+
 
 <!-- A more detailed Usage or detailed explaination of the repository here -->
 ## Usage
+The main class in this package is `SIB`, which implements the standard clustering interface of [SciKit Learn](https://scikit-learn.org/stable/), providing methods such as `fit()`, `fit_transform()`, `fit_predict()`, etc. 
 
-This repository contains some example best practices for open source repositories:
+The sample code below clusters the 18.8K documents of the 20-News-Groups dataset into 20 clusters:
 
-* [LICENSE](LICENSE)
-* [README.md](README.md)
-* [CONTRIBUTING.md](CONTRIBUTING.md)
-* [MAINTAINERS.md](MAINTAINERS.md)
-<!-- A Changelog allows you to track major changes and things that happen, https://github.com/github-changelog-generator/github-changelog-generator can help automate the process -->
-* [CHANGELOG.md](CHANGELOG.md)
+```python
 
-> These are optional
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.datasets import fetch_20newsgroups
+from sklearn import metrics
+from sib import SIB
 
-<!-- The following are OPTIONAL, but strongly suggested to have in your repository. -->
-* [dco.yml](.github/dco.yml) - This enables DCO bot for you, please take a look https://github.com/probot/dco for more details.
-* [travis.yml](.travis.yml) - This is a example `.travis.yml`, please take a look https://docs.travis-ci.com/user/tutorial/ for more details.
+# read the dataset
+dataset = fetch_20newsgroups(subset='all', categories=None,
+                             shuffle=True, random_state=256)
 
-These may be copied into a new or existing project to make it easier for developers not on a project team to collaborate.
+gold_labels = dataset.target
+n_clusters = np.unique(gold_labels).shape[0]
 
-<!-- A notes section is useful for anything that isn't covered in the Usage or Scope. Like what we have below. -->
-## Notes
+# create count vectors using the 10K most frequent words
+vectorizer = CountVectorizer(max_features=10000)
+X = vectorizer.fit_transform(dataset.data)
 
-**NOTE: While this boilerplate project uses the Apache 2.0 license, when
-establishing a new repo using this template, please use the
-license that was approved for your project.**
+# SIB initialization and clustering; parameters:
+# perform 10 random initializations (n_init=10); the best one is returned.
+# up to 15 optimization iterations in each initialization (max_iter=15)
+# use all cores in the running machine for parallel execution (n_jobs=-1)
+sib = SIB(n_clusters=n_clusters, random_state=128, n_init=10,
+          n_jobs=-1, max_iter=15, verbose=True)
+sib.fit(X)
 
-**NOTE: This repository has been configured with the [DCO bot](https://github.com/probot/dco).
-When you set up a new repository that uses the Apache license, you should
-use the DCO to manage contributions. The DCO bot will help enforce that.
-Please contact one of the IBM GH Org stewards.**
+# report standard clustering metrics
+print("Homogeneity: %0.3f" % metrics.homogeneity_score(gold_labels, sib.labels_))
+print("Completeness: %0.3f" % metrics.completeness_score(gold_labels, sib.labels_))
+print("V-measure: %0.3f" % metrics.v_measure_score(gold_labels, sib.labels_))
+print("Adjusted Rand-Index: %.3f" % metrics.adjusted_rand_score(gold_labels, sib.labels_))
+```
 
-<!-- Questions can be useful but optional, this gives you a place to say, "This is how to contact this project maintainers or create PRs -->
-If you have any questions or issues you can create a new [issue here][issues].
-
-Pull requests are very welcome! Make sure your patches are well tested.
-Ideally create a topic branch for every separate change you make. For
-example:
-
-1. Fork the repo
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Added some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
+Expected result:
+```
+sIB information stats on best partition:
+	I(T;Y) = 0.5685, H(T) = 4.1987
+	I(T;Y)/I(X;Y) = 0.1468
+	H(T)/H(X) = 0.2956
+Homogeneity: 0.616
+Completeness: 0.633
+V-measure: 0.624
+Adjusted Rand-Index: 0.507
+```
 
 <!-- License and Authors is optional here, but gives you the ability to highlight who is involed in the project -->
-## License & Authors
+## License
 
 If you would like to see the detailed LICENSE click [here](LICENSE).
 
-- Author: New OpenSource IBMer <new-opensource-ibmer@ibm.com>
 
 ```text
 Copyright:: 2019- IBM, Inc
@@ -75,7 +86,22 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
 ```
+
+## Authors 
+- Algorithm and pseudo-code: [Slonim, Friedman and Tishby (2002)](https://github.com/IBM/sib/edit/master/README.md#Reference)
+- First python implementation: [Daniel Hershcovich](https://danielhers.github.io/)
+- Optimization work: Assaf Toledo and Elad Venetian
+- Maintainer: [Assaf Toledo](https://github.com/assaftibm)
+
+
+<!-- Questions can be useful but optional, this gives you a place to say, "This is how to contact this project maintainers or create PRs -->
+If you have any questions or issues you can create a new [issue here][issues].
+
+## Reference
+N. Slonim, N. Friedman, and N. Tishby (2002). Unsupervised Document Classification using Sequential Information Maximization. SIGIR 2002.
+https://www.cse.huji.ac.il/~nir/Abstracts/SlonimSIGIR2002.html
 
 
 [issues]: https://github.com/IBM/repo-template/issues/new
