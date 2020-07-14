@@ -1,3 +1,3 @@
 # MAINTAINERS
 
-Christopher Ferris - chrisfer@us.ibm.com
+Assaf Toledo - assaf.toledo@ibm.com
