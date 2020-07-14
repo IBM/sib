@@ -9,14 +9,14 @@
 <!-- Not always needed, but a scope helps the user understand in a short sentance like below, why this repo exists -->
 ## Scope
 
-This project provides an optimized implementation of the text clustering algorithm "sequential Information Bottleneck" (sIB), described in [Slonim, Friedman and Tishby (2002)](https://github.com/IBM/sib/edit/master/README.md#Reference).
-The algorithm is implemented in Python and in C++. The project is packaged as a python library with access to the C++ implementation using a Cython wrapper.
+This project provides an optimized implementation of the text clustering algorithm "sequential Information Bottleneck" (sIB), described in [Slonim, Friedman and Tishby (2002)](#reference).
+The algorithm is implemented in Python and C++. The project is packaged as a python library with access to the C++ implementation using a Cython wrapper.
 
 
 
 <!-- A more detailed Usage or detailed explaination of the repository here -->
 ## Usage
-The main class in this package is `SIB`, which implements the standard clustering interface of [SciKit Learn](https://scikit-learn.org/stable/), providing methods such as `fit()`, `fit_transform()`, `fit_predict()`, etc. 
+The main class in this library is `SIB`, which implements the clustering interface of [SciKit Learn][sklearn], providing methods such as `fit()`, `fit_transform()`, `fit_predict()`, etc. 
 
 The sample code below clusters the 18.8K documents of the 20-News-Groups dataset into 20 clusters:
 
@@ -69,9 +69,6 @@ Adjusted Rand-Index: 0.507
 <!-- License and Authors is optional here, but gives you the ability to highlight who is involed in the project -->
 ## License
 
-If you would like to see the detailed LICENSE click [here](LICENSE).
-
-
 ```text
 Copyright:: 2019- IBM, Inc
 
@@ -89,8 +86,11 @@ limitations under the License.
 
 ```
 
+If you would like to see the detailed LICENSE click [here](LICENSE).
+
+
 ## Authors 
-- Algorithm and pseudo-code: [Slonim, Friedman and Tishby (2002)](https://github.com/IBM/sib/edit/master/README.md#Reference)
+- Algorithm and pseudo-code: [Slonim, Friedman and Tishby (2002)](#reference)
 - First python implementation: [Daniel Hershcovich](https://danielhers.github.io/)
 - Optimization work: Assaf Toledo and Elad Venetian
 - Maintainer: [Assaf Toledo](https://github.com/assaftibm)
@@ -104,4 +104,5 @@ N. Slonim, N. Friedman, and N. Tishby (2002). Unsupervised Document Classificati
 https://www.cse.huji.ac.il/~nir/Abstracts/SlonimSIGIR2002.html
 
 
-[issues]: https://github.com/IBM/repo-template/issues/new
+[issues]: https://github.com/IBM/sib/issues/new
+[sklearn]: https://scikit-learn.org
