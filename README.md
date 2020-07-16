@@ -70,7 +70,7 @@ Adjusted Rand-Index: 0.507
 ## License
 
 ```text
-Copyright:: 2019- IBM, Inc
+Copyright IBM Corporation 2020
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
