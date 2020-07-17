@@ -66,6 +66,9 @@ V-measure: 0.624
 Adjusted Rand-Index: 0.507
 ```
 
+See the [Examples](examples) directory for more illustrations and a comparison against K-Means.
+
+
 <!-- License and Authors is optional here, but gives you the ability to highlight who is involed in the project -->
 ## License
 
