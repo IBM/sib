@@ -6,7 +6,7 @@
 # distutils: language = c++
 # cython: language_level=3
 
-from c_sib_optimizer_sparse cimport SIBOptimizerSparse
+from .c_sib_optimizer_sparse cimport SIBOptimizerSparse
 
 from libcpp cimport bool
 

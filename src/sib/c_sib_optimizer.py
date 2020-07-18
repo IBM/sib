@@ -3,7 +3,7 @@
 # LICENSE: Apache License 2.0 (Apache-2.0)
 # http://www.apache.org/licenses/LICENSE-2.0
 
-from sib.c_sib_optimizer_sprase import CSIBOptimizerSparse
+from sib.c_package.c_sib_optimizer_sprase import CSIBOptimizerSparse
 
 
 class CSIBOptimizer:

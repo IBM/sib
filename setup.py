@@ -18,12 +18,12 @@ elif platform.system() == "Darwin":
     link_extra_args = ["-O3", "-stdlib=libc++", "-mmacosx-version-min=10.9"]
 
 extensions = [
-    Extension(
-      name="sib.c_sib_optimizer_sprase", # name/path of generated .so file
-      sources=["src/sib/c_package/c_sib_optimizer_sprase.cpp"], # cython generated cpp file
-      extra_compile_args=compile_extra_args,
-      extra_link_args=link_extra_args,
-      language="c++",), # tells python that the language of the extension is c++
+    Extension('sib.c_package.c_sib_optimizer_sprase', # name/path of generated .so file
+              ['src/sib/c_package/c_sib_optimizer_sprase.pyx'], # cython file
+
+              extra_compile_args=compile_extra_args,
+              extra_link_args=link_extra_args,
+              language="c++")
 ]
 
 # collecting all dependencies from requirements.txt
