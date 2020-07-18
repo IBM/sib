@@ -10,6 +10,10 @@ on: [push, pull_request]
 #     types:
 #       - published
 
+env:
+  global:
+    - CIBW_SKIP: "cp27-* cp33-* cp34-* cp35-*"
+
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -60,4 +64,3 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           path: dist/*.tar.gz
-
