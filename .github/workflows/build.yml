@@ -10,10 +10,6 @@ on: [push, pull_request]
 #     types:
 #       - published
 
-env:
-  global:
-    CIBW_SKIP: cp27-* cp33-* cp34-* cp35-*
-
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -40,6 +36,8 @@ jobs:
           choco install vcpython27 -f -y
 
       - name: Build wheels
+        env:
+          CIBW_SKIP: cp27-* cp33-* cp34-* cp35-*
         run: |
           python -m cibuildwheel --output-dir wheelhouse
 
