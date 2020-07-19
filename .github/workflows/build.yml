@@ -57,6 +57,7 @@ jobs:
           python-version: '3.7'
 
       - name: Build sdist
+        run: pip install Cython
         run: python setup.py sdist
 
       - uses: actions/upload-artifact@v2
