@@ -2,7 +2,6 @@ import os
 import platform
 from setuptools import setup
 from setuptools.extension import Extension
-from Cython.Build import cythonize
 
 
 with open("README.md", "r") as fh:
@@ -52,7 +51,7 @@ setup(
               'sib.c_package',
     ],
     package_dir={'': 'src'},
-    ext_modules = cythonize(extensions),
+    ext_modules = extensions,
     classifiers=[
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
