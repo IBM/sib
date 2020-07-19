@@ -1,0 +1,8 @@
+include src/sib/c_package/c_sib_optimizer_sprase.pyx
+include src/sib/c_package/c_sib_optimizer_sparse.pxd
+include src/sib/c_package/sib_clustering.cpp
+include src/sib/c_package/sib_clustering.h
+include src/sib/c_package/sib_optimizer_sparse.cpp
+include src/sib/c_package/sib_optimizer_sparse.h
+include src/sib/c_package/sib_utils.cpp
+include src/sib/c_package/sib_utils.h
