@@ -39,7 +39,7 @@ else:
 
 setup(
     name="sib",
-    version="1.0.0",
+    version="0.0.1",
     author="Assaf Toledo",
     author_email="assaf.toledo@ibm.com",
     description="sequential Information Bottleneck",
