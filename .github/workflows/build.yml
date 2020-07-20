@@ -56,9 +56,10 @@ jobs:
         with:
           python-version: '3.7'
 
+      - name: Install Cython
+        run: pip install Cython
+
       - name: Build sdist
-        env:
-          CIBW_BEFORE_BUILD: pip install Cython
         run: python setup.py sdist
 
       - uses: actions/upload-artifact@v2
