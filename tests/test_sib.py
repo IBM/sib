@@ -7,6 +7,8 @@ from scipy.sparse import csr_matrix
 from sib import SIB
 
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
 setups = {
     'baseline':      {'n_cls': 20, 'n_jobs': 1, 'n_init': 1, 'max_iter': 15, 'tol': 0.02, 'uniform': True, 'opt': 'B'},
     'n_init':        {'n_cls': 20, 'n_jobs': 1, 'n_init': 8, 'max_iter': 15, 'tol': 0.02, 'uniform': True, 'opt': 'C'},
@@ -16,7 +18,7 @@ setups = {
     'uniform_prior': {'n_cls': 20, 'n_jobs': 1, 'n_init': 1, 'max_iter': 15, 'tol': 0.02, 'uniform': False, 'opt': 'C'}
 }
 
-vectors_path = os.path.join('resources', 'vectors')
+vectors_path = os.path.join(base_dir, 'resources', 'vectors')
 
 random_state = 527802
 
@@ -40,7 +42,7 @@ def create(setup_name, optimizer):
 
 
 def get_path(setup_name):
-    return os.path.join('resources', setup_name + '_ref')
+    return os.path.join(base_dir, 'resources', setup_name + '_ref')
 
 
 def exists(setup_name):
