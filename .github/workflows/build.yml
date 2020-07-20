@@ -20,7 +20,7 @@ jobs:
 
     env:
       CIBW_BEFORE_TEST: pip install -r {project}/tests/requirements.txt
-      CIBW_TEST_COMMAND: "pytest"
+      CIBW_TEST_COMMAND: "pytest {project}/tests -vv --durations=0"
 
     steps:
       - uses: actions/checkout@v2
