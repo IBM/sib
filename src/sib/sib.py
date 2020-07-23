@@ -302,9 +302,13 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             assert np.allclose(partition.pt, v_partition.pt)
             assert np.allclose(partition.t_size, v_partition.t_size)
             assert np.allclose(partition.pyx_sum, v_partition.pyx_sum)
-            assert np.allclose(partition.py_t, v_partition.py_t)
             assert np.allclose(partition.ity, v_partition.ity)
             assert np.allclose(partition.ht, v_partition.ht)
+            if partition.py_t is None:
+                assert v_partition.py_t is None
+            else:
+                assert v_partition.py_t is not None
+                assert np.allclose(partition.py_t, v_partition.py_t)
 
         partition.n_iter += 1
         if v_optimizer:
