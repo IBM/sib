@@ -202,7 +202,7 @@ double SIBOptimizerDense::calc_labels_costs_score(const double* pt, const double
             for (int j=0 ; j<this->n_features ; j++) {
                 double py_t_t_j = py_t_t[j];
                 double py_x_x_j = py_x_x[j];
-                double average_j = pi1 * py_x_x_j + pi2 * py_t_j;
+                double average_j = pi1 * py_x_x_j + pi2 * py_t_t_j;
                 if (average_j>0) {
                     double log2_inv_average_j = -log2(average_j);
                     kl1 += py_x_x_j * log2_inv_average_j;
