@@ -1,1 +1,7 @@
 __pycache__
+venv/
+.idea
+dist/
+build/
+output/
+sib.egg-info/
