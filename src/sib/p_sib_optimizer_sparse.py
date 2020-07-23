@@ -8,7 +8,7 @@ from numpy import errstate, isneginf
 from scipy.stats import entropy
 
 
-class PSIBOptimizer:
+class PSIBOptimizerSparse:
     def __init__(self, n_samples, n_clusters, n_features, py_x, pyx, py_x_kl, px, inv_beta):
         self.n_samples = n_samples
         self.n_clusters = n_clusters
@@ -21,7 +21,7 @@ class PSIBOptimizer:
         self.indexed_py_x = self.sparse_matrix_indexer(self.py_x)
         self.indexed_pyx = self.sparse_matrix_indexer(self.pyx)
 
-    def run(self, x_permutation, pt_x, pt, t_size, pyx_sum, ity, ref_pt_x=None):
+    def run(self, x_permutation, pt_x, pt, t_size, pyx_sum, py_t, ity, ref_pt_x=None):
         changes_count = 0
 
         for j in range(self.n_samples):
@@ -45,8 +45,6 @@ class PSIBOptimizer:
                                                  self.indexed_py_x, None, t,
                                                  ref_pt_x[x] if ref_pt_x is not None else None)
             ity += delta
-
-            # print("%d => %d" % (x, new_t))
 
             # update membership
             pt[new_t] += px
@@ -111,7 +109,7 @@ class PSIBOptimizer:
 
         return new_t
 
-    def calc_labels_costs_score(self, pt, pyx_sum, n_samples, py_x, labels, costs, infer_mode):
+    def calc_labels_costs_score(self, pt, pyx_sum, py_t, n_samples, py_x, labels, costs, infer_mode):
         score = 0
         if infer_mode:
             px = np.full(n_samples, 1 / (self.n_samples + 1))

@@ -3,6 +3,8 @@
 # LICENSE: Apache License 2.0 (Apache-2.0)
 # http://www.apache.org/licenses/LICENSE-2.0
 
+# cython: language_level=3, boundscheck=False
+
 cdef extern from "sib_optimizer_sparse.cpp":
     pass
 

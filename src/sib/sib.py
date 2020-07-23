@@ -11,8 +11,10 @@ from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.preprocessing import normalize
 from sklearn.utils import check_random_state
 from joblib import Parallel, delayed, effective_n_jobs
-from .p_sib_optimizer import PSIBOptimizer
-from .c_sib_optimizer import CSIBOptimizer
+from .p_sib_optimizer_sparse import PSIBOptimizerSparse
+from .p_sib_optimizer_dense import PSIBOptimizerDense
+from .c_sib_optimizer_sparse import CSIBOptimizerSparse
+from .c_sib_optimizer_dense import CSIBOptimizerDense
 
 
 class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
@@ -149,23 +151,26 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             raise ValueError("n_samples=%d should be >= n_clusters=%d"
                              % (self.n_samples, self.n_clusters))
 
-        if not issparse(x):
-            raise ValueError("sIB is designed to work on sparse count-vectors; "
-                             "input data should be provided in a csr_matrix.")
-
         # each sample is treated as a probability vector over the vocabulary
         self.px_y = normalize(x, norm='l1', axis=1, copy=True, return_norm=False)
         self.py_x = self.px_y.T
         self.pxy = self.px_y / np.sum(self.px_y) if self.uniform_prior else x / np.sum(x)
         self.pyx = self.pxy.T
-        self.px = self.pxy.sum(axis=1).A1
-        self.py = self.pxy.sum(axis=0).A1
+        self.px = self.pxy.sum(axis=1)
+        self.py = self.pxy.sum(axis=0)
+        if issparse(x):
+            self.px = self.px.A1
+            self.py = self.py.A1
         self.ixy, self.hx, self.hy = self.calc_mi_entropy(self.pxy, self.px, self.py)
 
-        indptr = self.py_x.indptr
-        data = self.py_x.data
-        self.py_x_kl = np.fromiter((-entropy(data[indptr[i]:indptr[i + 1]], base=2) for i in range(len(indptr) - 1)),
-                                   float, self.n_samples)
+        if issparse(x):
+            indptr = self.py_x.indptr
+            data = self.py_x.data
+            self.py_x_kl = np.fromiter((-entropy(data[indptr[i]:indptr[i + 1]], base=2)
+                                        for i in range(len(indptr) - 1)), float, self.n_samples)
+        else:
+            self.py_x_kl = -entropy(self.py_x, base=2, axis=0)
+
         # print("%.8f, %.8f, %.8f" % (self.ixy, self.hx, self.hy))
         # self.dump_probs()
 
@@ -231,20 +236,32 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         # return the partition
         return partition
 
+    def create_c_optimizer(self):
+        if issparse(self.py_x):
+            return CSIBOptimizerSparse(self.n_samples, self.n_clusters, self.n_features,
+                                       self.py_x, self.pyx, self.py_x_kl, self.px, self.inv_beta)
+        else:
+            return CSIBOptimizerDense(self.n_samples, self.n_clusters, self.n_features,
+                                      self.py_x, self.pyx, self.py_x_kl, self.px, self.inv_beta)
+
+    def create_p_optimizer(self):
+        if issparse(self.py_x):
+            return PSIBOptimizerSparse(self.n_samples, self.n_clusters, self.n_features,
+                                       self.py_x, self.pyx, self.py_x_kl, self.px, self.inv_beta)
+        else:
+            return PSIBOptimizerDense(self.n_samples, self.n_clusters, self.n_features,
+                                      self.py_x, self.pyx, self.py_x_kl, self.px, self.inv_beta)
+
     def create_optimizers(self):
         if self.optimizer_type == 'C':
-            optimizer = CSIBOptimizer(self.n_samples, self.n_clusters, self.n_features,
-                                      self.py_x, self.pyx, self.py_x_kl, self.px, self.inv_beta)
+            optimizer = self.create_c_optimizer()
             v_optimizer = None
         elif self.optimizer_type == 'P':
-            optimizer = PSIBOptimizer(self.n_samples, self.n_clusters, self.n_features,
-                                      self.py_x, self.pyx, self.py_x_kl, self.px, self.inv_beta)
+            optimizer = self.create_p_optimizer()
             v_optimizer = None
         else:
-            optimizer = CSIBOptimizer(self.n_samples, self.n_clusters, self.n_features,
-                                      self.py_x, self.pyx, self.py_x_kl, self.px, self.inv_beta)
-            v_optimizer = PSIBOptimizer(self.n_samples, self.n_clusters, self.n_features,
-                                        self.py_x, self.pyx, self.py_x_kl, self.px, self.inv_beta)
+            optimizer = self.create_c_optimizer()
+            v_optimizer = self.create_p_optimizer()
         return optimizer, v_optimizer
 
     def report_status(self, partition, job_id, run_id):
@@ -272,19 +289,20 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
         partition.change_ratio, partition.ity, partition.ht = optimizer.run(
           x_permutation, partition.pt_x, partition.pt, partition.t_size,
-          partition.pyx_sum, partition.ity)
+          partition.pyx_sum, partition.py_t, partition.ity)
 
         if v_optimizer:
             v_partition.change_ratio, v_partition.ity, v_partition.ht = v_optimizer.run(
                 x_permutation, v_partition.pt_x,
                 v_partition.pt, v_partition.t_size,
-                v_partition.pyx_sum,
+                v_partition.pyx_sum, v_partition.py_t,
                 v_partition.ity, partition.pt_x)
             assert np.allclose(partition.change_ratio, v_partition.change_ratio)
             assert np.allclose(partition.pt_x, v_partition.pt_x)
             assert np.allclose(partition.pt, v_partition.pt)
             assert np.allclose(partition.t_size, v_partition.t_size)
             assert np.allclose(partition.pyx_sum, v_partition.pyx_sum)
+            assert np.allclose(partition.py_t, v_partition.py_t)
             assert np.allclose(partition.ity, v_partition.ity)
             assert np.allclose(partition.ht, v_partition.ht)
 
@@ -320,6 +338,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         costs = np.empty((n_samples, self.n_clusters))
         score = optimizer.calc_labels_costs_score(pt=self.partition_.pt,
                                                   pyx_sum=self.partition_.pyx_sum,
+                                                  py_t=self.partition_.py_t,
                                                   n_samples=n_samples, py_x=py_x,
                                                   labels=labels, costs=costs,
                                                   infer_mode=infer_mode)
@@ -328,6 +347,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             v_costs = np.empty((n_samples, self.n_clusters))
             v_score = v_optimizer.calc_labels_costs_score(pt=self.partition_.pt,
                                                           pyx_sum=self.partition_.pyx_sum,
+                                                          py_t=self.partition_.py_t,
                                                           n_samples=n_samples, py_x=py_x,
                                                           labels=v_labels, costs=v_costs,
                                                           infer_mode=infer_mode)
@@ -344,10 +364,6 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
         if not self.n_samples > 1:
             raise ValueError("n_samples=%d should be > 1" % self.n_samples)
-
-        if not issparse(x):
-            raise ValueError("sIB is designed to work on sparse count-vectors; "
-                             "input data should be provided in a csr_matrix.")
 
         if not self.uniform_prior:
             raise ValueError("New data can be fit only when uniform_prior=True")
@@ -489,7 +505,9 @@ class Partition:
             self.pt_x[indices] = t
             self.t_size[t] = len(indices)
             self.pt[t] = px[indices].sum()
-            self.pyx_sum[:, t] = pyx[:, indices].sum(axis=1).A1
+            pyx_sum = pyx[:, indices].sum(axis=1)
+            self.pyx_sum[:, t] = pyx_sum.A1 if issparse(pyx) else pyx_sum
+        self.py_t = self.pyx_sum * (1 / self.pt) if not issparse(pyx) else None
 
         # calculate information
         pxy_sum = self.pyx_sum.T
