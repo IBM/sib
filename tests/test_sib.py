@@ -32,6 +32,8 @@ vectors_path = os.path.join(base_dir, 'resources', 'vectors')
 
 random_state = 527802
 
+max_features = 2500
+
 
 def get_names():
     return setups.keys()
@@ -104,7 +106,7 @@ def verify(setup_name, vectors):
 def vectorize_20ng():
     dataset = fetch_20newsgroups(subset='train', categories=None,
                                  shuffle=True, random_state=256)
-    vectorizer = CountVectorizer(max_features=5000)
+    vectorizer = CountVectorizer(max_features=max_features)
     return vectorizer.fit_transform(dataset.data)
 
 
