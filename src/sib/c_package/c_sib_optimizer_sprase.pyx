@@ -48,6 +48,3 @@ cdef class CSIBOptimizerSparse:
                                                             &py_x_indices[0], &py_x_indptr[0],
                                                             &py_x_data[0],
                                                             &labels[0], &costs[0, 0], infer_mode)
-
-    def sparse_js(self, int[::1] p_indices, double[::1] p_values, double[::1] q, double pi1, double pi2):
-        return self.c_sib_optimizer.sparse_js(&p_indices[0], &p_values[0], len(p_indices), &q[0], pi1, pi2)

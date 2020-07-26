@@ -48,8 +48,6 @@ class SIBOptimizerSparse {
                                        const int* py_x_indices, const int* py_x_indptr, const double* py_x_data,
                                        int* labels, double* costs, bool infer_mode);
 
-        double sparse_js(const int* p_indices, const double* p_values, size_t p_size, double* q, double pi1, double pi2);
-
     private:
         int calc_merge_costs(int x, double px, double* pt, double* pyx_sum, bool uniform, double* costs_x);
 };

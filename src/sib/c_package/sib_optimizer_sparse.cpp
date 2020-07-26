@@ -250,23 +250,3 @@ double SIBOptimizerSparse::calc_labels_costs_score(const double* pt, const doubl
 
     return score;
 }
-
-inline double SIBOptimizerSparse::sparse_js(const int* p_indices, const double* p_values, size_t p_size, double* q, double pi1, double pi2) {
-    double p_value_i, q_value_i, average_i;
-    double kl1 = 0;
-    double kl2_comp1 = 0;
-    double py_t_sum = 0;
-    for (size_t i=0 ; i<p_size ; i++) {
-        p_value_i = p_values[i];
-        q_value_i = q[p_indices[i]];
-        average_i = p_value_i * pi1 + q_value_i * pi2;
-        kl1 += p_value_i * log2(p_value_i / average_i);
-        if (q_value_i>0) {
-            kl2_comp1 += q_value_i * log2(q_value_i / average_i);
-        }
-        py_t_sum += q_value_i;
-    }
-    double kl2_comp2 = log2(1 / pi2) * (1.0 - py_t_sum);
-    double kl2 = kl2_comp1 + kl2_comp2;
-    return pi1 * kl1 + pi2 * kl2;
-}
