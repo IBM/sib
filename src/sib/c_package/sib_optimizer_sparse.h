@@ -15,15 +15,10 @@ class SIBOptimizerSparse {
         int n_clusters;
         int n_features;
 
-        const int* py_x_indices;
-        const int* py_x_indptr;
+        const int* csr_indices;
+        const int* csr_indptr;
         const double* py_x_data;
-        size_t py_x_data_size;
-
-        const int* pyx_indices;
-        const int* pyx_indptr;
         const double* pyx_data;
-        size_t pyx_data_size;
 
         const double* py_x_kl;
 
@@ -33,10 +28,8 @@ class SIBOptimizerSparse {
         bool use_inv_beta;
 
         SIBOptimizerSparse(int n_samples, int n_clusters, int n_features,
-                           const int* py_x_indices, const int* py_x_indptr,
-                           const double* py_x_data, size_t py_x_data_size,
-                           const int* pyx_indices, const int* pyx_indptr,
-                           const double* pyx_data, size_t pyx_data_size,
+                           const int* csr_indices, const int* csr_indptr,
+                           const double* py_x_data, const double* pyx_data,
                            const double* py_x_kl, const double* px, double inv_beta);
         virtual ~SIBOptimizerSparse();
 

@@ -10,9 +10,9 @@ class CSIBOptimizerSparse:
     def __init__(self, n_samples, n_clusters, n_features, py_x, pyx, py_x_kl, px, inv_beta):
         self.c_sib_optimizer = CSIBOptimizer(
             n_samples, n_clusters, n_features,
-            py_x.indices, py_x.indptr, py_x.data,
-            pyx.indices, pyx.indptr, pyx.data, py_x_kl,
-            px, inv_beta)
+            py_x.indices, py_x.indptr,
+            py_x.data, pyx.data,
+            py_x_kl, px, inv_beta)
 
     def run(self, x_permutation, pt_x, pt, t_size, pyx_sum, py_t, ity):
         return self.c_sib_optimizer.run(x_permutation, pt_x, pt, t_size, pyx_sum, ity)

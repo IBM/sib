@@ -21,13 +21,13 @@ cdef class CSIBOptimizerSparse:
     cdef SIBOptimizerSparse* c_sib_optimizer  # hold a pointer to the C++ instance which we're wrapping
 
     def __cinit__(self, int n_samples, int n_clusters, int n_features,
-                  const int[::1] py_x_indices, const int[::1] py_x_indptr, const double[::1] py_x_data,
-                  const int[::1] pyx_indices, const int[::1] pyx_indptr, const double[::1] pyx_data,
+                  const int[::1] csr_indices, const int[::1] csr_indptr,
+                  const double[::1] py_x_data, const double[::1] pyx_data,
                   const double[::1] py_x_kl, const double[::1] px, double inv_beta):
         self.c_sib_optimizer = new SIBOptimizerSparse(
             n_samples, n_clusters, n_features,
-            &py_x_indices[0], &py_x_indptr[0], &py_x_data[0], len(py_x_data),
-            &pyx_indices[0], &pyx_indptr[0], &pyx_data[0], len(pyx_data),
+            &csr_indices[0], &csr_indptr[0],
+            &py_x_data[0], &pyx_data[0],
             &py_x_kl[0], &px[0], inv_beta)
 
     def __dealloc__(self):

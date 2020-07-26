@@ -13,22 +13,16 @@
 
 // Overloaded constructor
 SIBOptimizerSparse::SIBOptimizerSparse(int n_samples, int n_clusters, int n_features,
-                                       const int* py_x_indices, const int* py_x_indptr,
-                                       const double* py_x_data, size_t py_x_data_size,
-                                       const int* pyx_indices, const int* pyx_indptr,
-                                       const double* pyx_data, size_t pyx_data_size,
+                                       const int* csr_indices, const int* csr_indptr,
+                                       const double* py_x_data, const double* pyx_data,
                                        const double* py_x_kl, const double* px, double inv_beta) {
     this->n_samples = n_samples;
     this->n_clusters = n_clusters;
     this->n_features = n_features;
-    this->py_x_indices = py_x_indices;
-    this->py_x_indptr = py_x_indptr;
+    this->csr_indices = csr_indices;
+    this->csr_indptr = csr_indptr;
     this->py_x_data = py_x_data;
-    this->py_x_data_size = py_x_data_size;
-    this->pyx_indices = pyx_indices;
-    this->pyx_indptr = pyx_indptr;
     this->pyx_data = pyx_data;
-    this->pyx_data_size = pyx_data_size;
     this->py_x_kl = py_x_kl;
     this->px = px;
     this->inv_beta = inv_beta;
@@ -50,40 +44,34 @@ double SIBOptimizerSparse::run(int* x_permutation, int* pt_x, double* pt, int* t
         if (t_size[old_t] == 1)
             continue;
 
+        // the probability of x
         double px = this->px[x];
 
-        // find pyx starting and ending indices/values
-        int pyx_idxptr_start = this->pyx_indptr[x];
-        int pyx_idxptr_end = this->pyx_indptr[x + 1];
+        // find the starting and ending indices and size
+        int index_start = this->csr_indptr[x];
+        int index_end = this->csr_indptr[x + 1];
+        int x_size = index_end - index_start;
 
-        // find py_x starting and ending indices/values
-        int py_x_idxptr_start = this->py_x_indptr[x];
-        int py_x_idxptr_end = this->py_x_indptr[x+1];
-
-        // extracting py_x indices and values
-        const int* py_x_indices = &(this->py_x_indices[py_x_idxptr_start]);
-        const double* py_x_values = &(this->py_x_data[py_x_idxptr_start]);
-        int py_x_size = py_x_idxptr_end - py_x_idxptr_start;
-
+        // obtain pointers to indices and data
+        const int* indices = &(this->csr_indices[index_start]);
+        const double* py_x_data = &(this->py_x_data[index_start]);
+        const double* pyx_data = &(this->pyx_data[index_start]);
 
         // ----------- step 1 -  draw x out of its current cluster - old_t
         // update the pt and t_size arrays
         pt[old_t] = fmax(0, pt[old_t] - px);
         t_size[old_t] -= 1;
-
         // update the pyx_sum array
         double* pyx_sum_t = &pyx_sum[this->n_features * old_t];
-        for (int idxptr=pyx_idxptr_start ; idxptr<pyx_idxptr_end ; idxptr++) {
-            int idx = pyx_indices[idxptr];
-            double value = pyx_data[idxptr];
-            pyx_sum_t[idx] = fmax(0, pyx_sum_t[idx] - value);
+        for (int j=0 ; j<x_size ; j++) {
+            int index = indices[j];
+            double pyx_value = pyx_data[j];
+            pyx_sum_t[index] = fmax(0, pyx_sum_t[index] - pyx_value);
         }
 
         // ----------- step 2 -  calculate the merge costs and find new_t     ---------
-
         // get the part of KL1 that relies only on py_x
         double py_x_kl1 = this->py_x_kl[x];
-
         // loop over the centroids and find the one to which we can add x with the minimal increase in cost
         double min_delta = 0;
         int min_delta_t = -1;
@@ -97,9 +85,9 @@ double SIBOptimizerSparse::run(int* x_permutation, int* pt_x, double* pt, int* t
             double kl2_comp1 = 0;
             double py_t_sum = 0;
             double inv_pt_t = 1.0/pt[t];
-            for (int j=0 ; j<py_x_size ; j++) {
-                double py_x_value_j = py_x_values[j];
-                double py_t_value_j = pyx_sum_t[py_x_indices[j]] * inv_pt_t;
+            for (int j=0 ; j<x_size ; j++) {
+                double py_x_value_j = py_x_data[j];
+                double py_t_value_j = pyx_sum_t[indices[j]] * inv_pt_t;
                 double average_j = py_x_value_j * pi1 + py_t_value_j * pi2;
                 double log2_inv_average_j = -log2(average_j);
                 kl1 += py_x_value_j * log2_inv_average_j;
@@ -130,17 +118,18 @@ double SIBOptimizerSparse::run(int* x_permutation, int* pt_x, double* pt, int* t
         int new_t = min_delta_t;
         *ity += old_t_delta - min_delta;
 
+
         // ----------- step 3 - add x to its new cluster - t_new
         // update the pt and t_size arrays
         pt[new_t] += px;
         t_size[new_t] += 1;
         // update the pyx_sum array
         double* pyx_sum_new_t = &pyx_sum[this->n_features * new_t];
-        for (int idxptr=pyx_idxptr_start ; idxptr<pyx_idxptr_end ; idxptr++) {
-            pyx_sum_new_t[pyx_indices[idxptr]] += pyx_data[idxptr];
+        for (int j=0 ; j<x_size ; j++) {
+            pyx_sum_new_t[indices[j]] += pyx_data[j];
         }
 
-        // update the pt_x array and changes counter (if need be)
+        // update pt_x and counter if switched to a new cluster
         if (new_t != old_t) {
             pt_x[x] = new_t;
             n_changes += 1;
@@ -158,7 +147,10 @@ double SIBOptimizerSparse::run(int* x_permutation, int* pt_x, double* pt, int* t
     return this->n_samples > 0 ? n_changes / (double)(this->n_samples) : 0;
 }
 
-double SIBOptimizerSparse::calc_labels_costs_score(const double* pt, const double* pyx_sum, int new_n_samples, const int* new_py_x_indices, const int* new_py_x_indptr, const double* new_py_x_data, int* labels, double* costs, bool infer_mode) {
+double SIBOptimizerSparse::calc_labels_costs_score(const double* pt, const double* pyx_sum, int new_n_samples,
+                                                   const int* new_py_x_indices, const int* new_py_x_indptr,
+                                                   const double* new_py_x_data, int* labels, double* costs,
+                                                   bool infer_mode) {
     double score = 0;
 
     double infer_mode_px;
@@ -185,14 +177,14 @@ double SIBOptimizerSparse::calc_labels_costs_score(const double* pt, const doubl
         // pointer to where we write the result
         double* costs_x = &costs[this->n_clusters * x];
 
-        // find py_x starting and ending indices/values
-        int ind_start = new_py_x_indptr[x];
-        int ind_end = new_py_x_indptr[x+1];
+        // find py_x starting and ending indices
+        int index_start = new_py_x_indptr[x];
+        int index_end = new_py_x_indptr[x+1];
 
-        // extracting py_x indices and values
-        const int* py_x_indices = &(new_py_x_indices[ind_start]);
-        const double* py_x_values = &(new_py_x_data[ind_start]);
-        int py_x_size = ind_end - ind_start;
+        // obtain pointers to py_x indices and values
+        const int* py_x_indices = &(new_py_x_indices[index_start]);
+        const double* py_x_values = &(new_py_x_data[index_start]);
+        int py_x_size = index_end - index_start;
 
         // calculate the part of KL1 that relies only on py_x
         double py_x_kl1 = 0;
