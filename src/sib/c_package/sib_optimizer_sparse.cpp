@@ -82,7 +82,7 @@ double SIBOptimizerSparse::run(int* x_permutation, int* pt_x, double* pt, int* t
         // ----------- step 2 -  calculate the merge costs and find new_t     ---------
 
         // get the part of KL1 that relies only on py_x
-        double py_x_kl1 = this->py_x_kl[i];
+        double py_x_kl1 = this->py_x_kl[x];
 
         // loop over the centroids and find the one to which we can add x with the minimal increase in cost
         double min_delta = 0;
