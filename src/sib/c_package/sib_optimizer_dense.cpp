@@ -45,7 +45,7 @@ double SIBOptimizerDense::run(int* x_permutation, int* pt_x, double* pt, int* t_
             continue;
 
         double px = this->px[x];
-        const double* pyx_x = &pyx[n_features * x];
+        const double* pyx_x = &this->pyx[n_features * x];
 
         // ----------- step 1 -  draw x out of its current cluster - old_t
         // update the pt and t_size arrays
@@ -72,7 +72,7 @@ double SIBOptimizerDense::run(int* x_permutation, int* pt_x, double* pt, int* t_
         double min_delta = 0;
         int min_delta_t = -1;
         double old_t_delta = 0;
-        const double* py_x_x = &py_x[this->n_features * x];
+        const double* py_x_x = &this->py_x[this->n_features * x];
         for (int t=0 ; t<this->n_clusters ; t++) {
             double p_new = px + pt[t];
             double pi1 = px / p_new;
