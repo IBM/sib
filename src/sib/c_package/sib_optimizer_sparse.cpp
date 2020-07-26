@@ -97,16 +97,16 @@ double SIBOptimizerSparse::run(int* x_permutation, int* pt_x, double* pt, int* t
             double kl2_comp1 = 0;
             double py_t_sum = 0;
             double inv_pt_t = 1.0/pt[t];
-            for (int i=0 ; i<py_x_size ; i++) {
-                double py_x_value_i = py_x_values[i];
-                double py_t_value_i = pyx_sum_t[py_x_indices[i]] * inv_pt_t;
-                double average_i = py_x_value_i * pi1 + py_t_value_i * pi2;
-                double log2_inv_average_i = -log2(average_i);
-                kl1 += py_x_value_i * log2_inv_average_i;
-                if (py_t_value_i>0) {
-                    kl2_comp1 += py_t_value_i * (log2(py_t_value_i) + log2_inv_average_i);
+            for (int j=0 ; j<py_x_size ; j++) {
+                double py_x_value_j = py_x_values[j];
+                double py_t_value_j = pyx_sum_t[py_x_indices[j]] * inv_pt_t;
+                double average_j = py_x_value_j * pi1 + py_t_value_j * pi2;
+                double log2_inv_average_j = -log2(average_j);
+                kl1 += py_x_value_j * log2_inv_average_j;
+                if (py_t_value_j>0) {
+                    kl2_comp1 += py_t_value_j * (log2(py_t_value_j) + log2_inv_average_j);
                 }
-                py_t_sum += py_t_value_i;
+                py_t_sum += py_t_value_j;
             }
             double log2_pi2 = log2(pi2);
             double kl2_comp2 = -log2_pi2 * (1.0 - py_t_sum);
@@ -127,17 +127,13 @@ double SIBOptimizerSparse::run(int* x_permutation, int* pt_x, double* pt, int* t
                 old_t_delta = delta;
             }
         }
-
         int new_t = min_delta_t;
-
         *ity += old_t_delta - min_delta;
-
 
         // ----------- step 3 - add x to its new cluster - t_new
         // update the pt and t_size arrays
         pt[new_t] += px;
         t_size[new_t] += 1;
-
         // update the pyx_sum array
         double* pyx_sum_new_t = &pyx_sum[this->n_features * new_t];
         for (int idxptr=pyx_idxptr_start ; idxptr<pyx_idxptr_end ; idxptr++) {
