@@ -25,11 +25,10 @@ class SIBOptimizerDense {
         double inv_beta;
         bool use_inv_beta;
 
-        SIBOptimizerDense();
         SIBOptimizerDense(int n_samples, int n_clusters, int n_features,
                           const double* py_x, const double* pyx,
                           const double* py_x_kl, const double* px, double inv_beta);
-        ~SIBOptimizerDense();
+        virtual ~SIBOptimizerDense();
 
         double run(int* x_permutation, int* pt_x, double* pt, int* t_size,
                    double* pyx_sum, double* py_t, double* ity, double *ht);

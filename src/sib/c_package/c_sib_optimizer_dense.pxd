@@ -14,7 +14,6 @@ from libcpp cimport bool
 # Declare the class with cdef
 cdef extern from "sib_optimizer_dense.h":
     cdef cppclass SIBOptimizerDense:
-        SIBOptimizerDense() except +
         SIBOptimizerDense(int n_samples, int n_clusters, int n_features,
                           const double* py_x, const double* pyx,
                           const double* py_x_kl, const double* px,

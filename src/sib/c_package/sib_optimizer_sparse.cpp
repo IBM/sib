@@ -36,7 +36,7 @@ SIBOptimizerSparse::SIBOptimizerSparse(int n_samples, int n_clusters, int n_feat
 }
 
 // Destructor
-SIBOptimizerSparse::~SIBOptimizerSparse () {}
+SIBOptimizerSparse::~SIBOptimizerSparse() {}
 
 double SIBOptimizerSparse::run(int* x_permutation, int* pt_x, double* pt, int* t_size,
                                double* pyx_sum, double* ity, double *ht) {

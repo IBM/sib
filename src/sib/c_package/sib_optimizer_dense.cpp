@@ -30,7 +30,7 @@ SIBOptimizerDense::SIBOptimizerDense(int n_samples, int n_clusters, int n_featur
 }
 
 // Destructor
-SIBOptimizerDense::~SIBOptimizerDense () {}
+SIBOptimizerDense::~SIBOptimizerDense() {}
 
 double SIBOptimizerDense::run(int* x_permutation, int* pt_x, double* pt, int* t_size,
                               double* pyx_sum, double* py_t, double* ity, double *ht) {

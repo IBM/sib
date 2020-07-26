@@ -14,7 +14,6 @@ from libcpp cimport bool
 # Declare the class with cdef
 cdef extern from "sib_optimizer_sparse.h":
     cdef cppclass SIBOptimizerSparse:
-        SIBOptimizerSparse() except +
         SIBOptimizerSparse(int n_samples, int n_clusters, int n_features,
                            const int* py_x_indices, const int* py_x_indptr,
                            const double* py_x_data, size_t py_x_data_size,
