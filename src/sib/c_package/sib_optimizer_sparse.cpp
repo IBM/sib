@@ -73,51 +73,21 @@ double SIBOptimizerSparse::run(int* x_permutation, int* pt_x, double* pt, int* t
         // get the part of KL1 that relies only on py_x
         double py_x_kl1 = this->py_x_kl[x];
         // loop over the centroids and find the one to which we can add x with the minimal increase in cost
-        double min_delta = 0;
-        int min_delta_t = -1;
-        double old_t_delta = 0;
+        double min_cost = 0;
+        int min_cost_t = -1;
+        double cost_old_t = 0;
         for (int t=0 ; t<this->n_clusters ; t++) {
-            double p_new = px + pt[t];
-            double pi1 = px / p_new;
-            double pi2 = 1 - pi1;
-            double* pyx_sum_t = &pyx_sum[this->n_features * t];
-            double kl1 = py_x_kl1;
-            double kl2_comp1 = 0;
-            double py_t_sum = 0;
-            double inv_pt_t = 1.0/pt[t];
-            for (int j=0 ; j<x_size ; j++) {
-                double py_x_value_j = py_x_data[j];
-                double py_t_value_j = pyx_sum_t[indices[j]] * inv_pt_t;
-                double average_j = py_x_value_j * pi1 + py_t_value_j * pi2;
-                double log2_inv_average_j = -log2(average_j);
-                kl1 += py_x_value_j * log2_inv_average_j;
-                if (py_t_value_j>0) {
-                    kl2_comp1 += py_t_value_j * (log2(py_t_value_j) + log2_inv_average_j);
-                }
-                py_t_sum += py_t_value_j;
+            double cost = calc_merge_cost(pyx_sum, pt, t, px, indices, py_x_data, x_size, py_x_kl1);
+            if (min_cost_t == -1 || cost < min_cost) {
+                min_cost_t = t;
+                min_cost = cost;
             }
-            double log2_pi2 = log2(pi2);
-            double kl2_comp2 = -log2_pi2 * (1.0 - py_t_sum);
-            double kl2 = kl2_comp1 + kl2_comp2;
-            double js = pi1 * kl1 + pi2 * kl2;
-            if (this->use_inv_beta) {
-                double ent = pi1 * log2(pi1) + pi2 * log2_pi2;
-                js += this->inv_beta * ent;
-            }
-            double delta = p_new * js;
-
-            if (min_delta_t == -1 || delta < min_delta) {
-                min_delta_t = t;
-                min_delta = delta;
-            }
-
-            if (old_t == t) {
-                old_t_delta = delta;
+            if (t == old_t) {
+                cost_old_t = cost;
             }
         }
-        int new_t = min_delta_t;
-        *ity += old_t_delta - min_delta;
-
+        int new_t = min_cost_t;
+        *ity += cost_old_t - min_cost;
 
         // ----------- step 3 - add x to its new cluster - t_new
         // update the pt and t_size arrays
@@ -183,58 +153,63 @@ double SIBOptimizerSparse::calc_labels_costs_score(const double* pt, const doubl
 
         // obtain pointers to py_x indices and values
         const int* py_x_indices = &(new_py_x_indices[index_start]);
-        const double* py_x_values = &(new_py_x_data[index_start]);
+        const double* py_x_data = &(new_py_x_data[index_start]);
         int py_x_size = index_end - index_start;
 
         // calculate the part of KL1 that relies only on py_x
         double py_x_kl1 = 0;
         for (int i=0 ; i<py_x_size ; i++) {
-            double py_x_value_i = py_x_values[i];
+            double py_x_value_i = py_x_data[i];
             py_x_kl1 += py_x_value_i * log2(py_x_value_i);
         }
 
-        // loop over the centroids and find the delta from each one (+ which one yields the minimum)
-        double min_delta = 0;
-        int min_delta_t = -1;
+        // loop over the centroids and find the one to which we can add x with the minimal increase in cost
+        double min_cost = 0;
+        int min_cost_t = -1;
         for (int t=0 ; t<this->n_clusters ; t++) {
-            double pt_t = pt[t];
-            double p_new = px + pt_t;
-            double pi1 = px / p_new;
-            double pi2 = 1 - pi1;
-            const double* pyx_sum_t = &pyx_sum[this->n_features * t];
-            double kl1 = py_x_kl1;
-            double kl2_comp1 = 0;
-            double py_t_sum = 0;
-            double inv_pt_t = 1.0 / pt_t;
-            for (int i=0 ; i<py_x_size ; i++) {
-                double py_x_value_i = py_x_values[i];
-                double py_t_value_i = pyx_sum_t[py_x_indices[i]] * inv_pt_t;
-                double average_i = py_x_value_i * pi1 + py_t_value_i * pi2;
-                double log2_inv_average_i = -log2(average_i);
-                kl1 += py_x_value_i * log2_inv_average_i;
-                if (py_t_value_i>0) {
-                    kl2_comp1 += py_t_value_i * (log2(py_t_value_i) + log2_inv_average_i);
-                }
-                py_t_sum += py_t_value_i;
+            double cost = calc_merge_cost(pyx_sum, pt, t, px, py_x_indices, py_x_data, py_x_size, py_x_kl1);
+            if (min_cost_t == -1 || cost < min_cost) {
+                min_cost_t = t;
+                min_cost = cost;
             }
-            double log2_pi2 = log2(pi2);
-            double kl2_comp2 = -log2_pi2 * (1.0 - py_t_sum);
-            double kl2 = kl2_comp1 + kl2_comp2;
-            double js = pi1 * kl1 + pi2 * kl2;
-            if (this->use_inv_beta) {
-                double ent = pi1 * log2(pi1) + pi2 * log2_pi2;
-                js += this->inv_beta * ent;
-            }
-            double delta = p_new * js;
-            costs_x[t] = delta;
-            if (min_delta_t == -1 || delta < min_delta) {
-                min_delta_t = t;
-                min_delta = delta;
-            }
+            costs_x[t] = cost;
         }
-        labels[x] = min_delta_t;
-        score += min_delta;
+        labels[x] = min_cost_t;
+        score += min_cost;
     }
-
     return score;
+}
+
+inline double SIBOptimizerSparse::calc_merge_cost(const double *pyx_sum, const double *pt, int t, double px,
+                                                  const int* indices, const double* py_x_data, size_t x_size,
+                                                  double py_x_kl1) {
+    double pt_t = pt[t];
+    double p_new = px + pt_t;
+    double pi1 = px / p_new;
+    double pi2 = 1 - pi1;
+    const double* pyx_sum_t = &pyx_sum[this->n_features * t];
+    double kl1 = py_x_kl1;
+    double kl2_comp1 = 0;
+    double py_t_sum = 0;
+    double inv_pt_t = 1.0/pt_t;
+    for (int j=0 ; j<x_size ; j++) {
+        double py_x_value_j = py_x_data[j];
+        double py_t_value_j = pyx_sum_t[indices[j]] * inv_pt_t;
+        double average_j = py_x_value_j * pi1 + py_t_value_j * pi2;
+        double log2_inv_average_j = -log2(average_j);
+        kl1 += py_x_value_j * log2_inv_average_j;
+        if (py_t_value_j>0) {
+            kl2_comp1 += py_t_value_j * (log2(py_t_value_j) + log2_inv_average_j);
+        }
+        py_t_sum += py_t_value_j;
+    }
+    double log2_pi2 = log2(pi2);
+    double kl2_comp2 = -log2_pi2 * (1.0 - py_t_sum);
+    double kl2 = kl2_comp1 + kl2_comp2;
+    double js = pi1 * kl1 + pi2 * kl2;
+    if (this->use_inv_beta) {
+        double ent = pi1 * log2(pi1) + pi2 * log2_pi2;
+        js += this->inv_beta * ent;
+    }
+    return p_new * js;
 }

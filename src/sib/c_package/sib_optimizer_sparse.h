@@ -41,7 +41,8 @@ class SIBOptimizerSparse {
                                        int* labels, double* costs, bool infer_mode);
 
     private:
-        int calc_merge_costs(int x, double px, double* pt, double* pyx_sum, bool uniform, double* costs_x);
+        double calc_merge_cost(const double *pyx_sum, const double *pt, int t, double px,
+                               const int* indices, const double* py_x_data, size_t x_size, double py_x_kl1);
 };
 
 #endif

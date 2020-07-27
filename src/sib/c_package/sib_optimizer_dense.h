@@ -37,7 +37,8 @@ class SIBOptimizerDense {
                                        const double* py_x, int* labels, double* costs, bool infer_mode);
 
     private:
-        int calc_merge_costs(int x, double px, double* pt, double* pyx_sum, bool uniform, double* costs_x);
+        double calc_merge_cost(const double *py_t_t, const double *pt, int t, double px,
+                               const double* py_x_x, double py_x_kl1);
 };
 
 #endif

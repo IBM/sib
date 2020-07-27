@@ -64,54 +64,26 @@ double SIBOptimizerDense::run(int* x_permutation, int* pt_x, double* pt, int* t_
         }
 
         // ----------- step 2 -  calculate the merge costs and find new_t     ---------
-
         // get the part of KL1 that relies only on py_x
         double py_x_kl1 = this->py_x_kl[x];
-
         // loop over the centroids and find the one to which we can add x with the minimal increase in cost
-        double min_delta = 0;
-        int min_delta_t = -1;
-        double old_t_delta = 0;
+        double min_cost = 0;
+        int min_cost_t = -1;
+        double cost_old_t = 0;
         const double* py_x_x = &this->py_x[this->n_features * x];
         for (int t=0 ; t<this->n_clusters ; t++) {
-            double p_new = px + pt[t];
-            double pi1 = px / p_new;
-            double pi2 = 1 - pi1;
-            double* py_t_t = &py_t[this->n_features * t];
-            double kl1 = py_x_kl1;
-            double kl2 = 0;
-            for (int j=0 ; j<this->n_features ; j++) {
-                double py_t_t_j = py_t_t[j];
-                double py_x_x_j = py_x_x[j];
-                double average_j = pi1 * py_x_x_j + pi2 * py_t_t_j;
-                if (average_j>0) {
-                    double log2_inv_average_j = -log2(average_j);
-                    kl1 += py_x_x_j * log2_inv_average_j;
-                    if (py_t_t_j>0) {
-                        kl2 += py_t_t_j * (log2(py_t_t_j) + log2_inv_average_j);
-                    }
-                }
-            }
-            double js = pi1 * kl1 + pi2 * kl2;
+            double cost = calc_merge_cost(py_t, pt, t, px, py_x_x, py_x_kl1);
 
-            if (this->use_inv_beta) {
-                double ent = pi1 * log2(pi1) + pi2 * log2(pi2);
-                js += this->inv_beta * ent;
+            if (min_cost_t == -1 || cost < min_cost) {
+                min_cost_t = t;
+                min_cost = cost;
             }
-            double delta = p_new * js;
-
-            if (min_delta_t == -1 || delta < min_delta) {
-                min_delta_t = t;
-                min_delta = delta;
-            }
-
-            if (old_t == t) {
-                old_t_delta = delta;
+            if (t == old_t) {
+                cost_old_t = cost;
             }
         }
-
-        int new_t = min_delta_t;
-        *ity += old_t_delta - min_delta;
+        int new_t = min_cost_t;
+        *ity += cost_old_t - min_cost;
 
 
         // ----------- step 3 - add x to its new cluster - t_new
@@ -129,6 +101,7 @@ double SIBOptimizerDense::run(int* x_permutation, int* pt_x, double* pt, int* t_
         for (int j=0 ; j <  this->n_features; j++) {
             py_t_new_t[j] = pyx_sum_new_t[j] * inv_pt_new_t;
         }
+
 
         // update the pt_x array and changes counter (if need be)
         if (new_t != old_t) {
@@ -190,42 +163,46 @@ double SIBOptimizerDense::calc_labels_costs_score(const double* pt, const double
         }
 
         // loop over the centroids and find the one to which we can add x with the minimal increase in cost
-        double min_delta = 0;
-        int min_delta_t = -1;
+        double min_cost = 0;
+        int min_cost_t = -1;
         for (int t=0 ; t<this->n_clusters ; t++) {
-            double p_new = px + pt[t];
-            double pi1 = px / p_new;
-            double pi2 = 1 - pi1;
-            const double* py_t_t = &py_t[this->n_features * t];
-            double kl1 = py_x_kl1;
-            double kl2 = 0;
-            for (int j=0 ; j<this->n_features ; j++) {
-                double py_t_t_j = py_t_t[j];
-                double py_x_x_j = py_x_x[j];
-                double average_j = pi1 * py_x_x_j + pi2 * py_t_t_j;
-                if (average_j>0) {
-                    double log2_inv_average_j = -log2(average_j);
-                    kl1 += py_x_x_j * log2_inv_average_j;
-                    if (py_t_t_j>0) {
-                        kl2 += py_t_t_j * (log2(py_t_t_j) + log2_inv_average_j);
-                    }
-                }
+            double cost = calc_merge_cost(py_t, pt, t, px, py_x_x, py_x_kl1);
+            if (min_cost_t == -1 || cost < min_cost) {
+                min_cost_t = t;
+                min_cost = cost;
             }
-            double js = pi1 * kl1 + pi2 * kl2;
-
-            if (this->use_inv_beta) {
-                double ent = pi1 * log2(pi1) + pi2 * log2(pi2);
-                js += this->inv_beta * ent;
-            }
-            double delta = p_new * js;
-            costs_x[t] = delta;
-            if (min_delta_t == -1 || delta < min_delta) {
-                min_delta_t = t;
-                min_delta = delta;
-            }
+            costs_x[t] = cost;
         }
-        labels[x] = min_delta_t;
-        score += min_delta;
+        labels[x] = min_cost_t;
+        score += min_cost;
     }
     return score;
+}
+
+inline double SIBOptimizerDense::calc_merge_cost(const double *py_t, const double *pt, int t, double px,
+                                                 const double* py_x_x, double py_x_kl1) {
+    double p_new = px + pt[t];
+    double pi1 = px / p_new;
+    double pi2 = 1 - pi1;
+    const double* py_t_t = &py_t[this->n_features * t];
+    double kl1 = py_x_kl1;
+    double kl2 = 0;
+    for (int j=0 ; j<this->n_features ; j++) {
+        double py_t_t_j = py_t_t[j];
+        double py_x_x_j = py_x_x[j];
+        double average_j = pi1 * py_x_x_j + pi2 * py_t_t_j;
+        if (average_j>0) {
+            double log2_inv_average_j = -log2(average_j);
+            kl1 += py_x_x_j * log2_inv_average_j;
+            if (py_t_t_j>0) {
+                kl2 += py_t_t_j * (log2(py_t_t_j) + log2_inv_average_j);
+            }
+        }
+    }
+    double js = pi1 * kl1 + pi2 * kl2;
+    if (this->use_inv_beta) {
+        double ent = pi1 * log2(pi1) + pi2 * log2(pi2);
+        js += this->inv_beta * ent;
+    }
+    return p_new * js;
 }
