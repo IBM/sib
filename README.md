@@ -104,7 +104,7 @@ If you have any questions or issues you can create a new [issue here][issues].
 
 ## Reference
 N. Slonim, N. Friedman, and N. Tishby (2002). Unsupervised Document Classification using Sequential Information Maximization. SIGIR 2002.
-https://www.cse.huji.ac.il/~nir/Abstracts/SlonimSIGIR2002.html
+https://dl.acm.org/doi/abs/10.1145/564376.564401
 
 
 [issues]: https://github.com/IBM/sib/issues/new
