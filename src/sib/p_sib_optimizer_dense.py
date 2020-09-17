@@ -9,17 +9,36 @@ from scipy.stats import entropy
 
 
 class PSIBOptimizerDense:
-    def __init__(self, n_samples, n_clusters, n_features, py_x, pyx, py_x_kl, px, inv_beta):
-        self.n_samples = n_samples
+    def __init__(self, n_clusters, n_features, n_samples, xy, sum_xy, sum_x):
         self.n_clusters = n_clusters
         self.n_features = n_features
-        self.py_x = py_x
-        self.pyx = pyx
-        self.py_x_kl = py_x_kl
-        self.px = px
-        self.inv_beta = inv_beta
+        self.n_samples = n_samples
+        self.xy = xy
+        self.sum_xy = sum_xy
+        self.sum_x = sum_x
 
-    def run(self, x_permutation, pt_x, pt, t_size, pyx_sum, py_t, ity, ref_pt_x=None):
+    def optimize(self, x_permutation, t_size, sum_t, cent_sum_t, labels, ity, log_lookup_table, ref_labels=None):
+        return self.iterate(True, self.n_samples, self.xy,
+                            self.sum_xy, self.sum_x,
+                            x_permutation,
+                            t_size, sum_t, cent_sum_t,
+                            labels,
+                            None, None,  # costs and total cost
+                            log_lookup_table)
+
+    def infer(self, n_samples, xy, sum_xy, sum_x, t_size, sum_t,
+              cent_sum_t, labels, costs, log_lookup_table):
+        return self.iterate(n_samples, xy, sum_xy, sum_x,
+                            None,  # permutation
+                            t_size, sum_t, cent_sum_t,
+                            labels, costs,
+                            None,  # total cost
+                            log_lookup_table)
+
+    def iterate(self, n_samples, xy, sum_xy, sum_x,
+                x_permutation, t_size, sum_t, cent_sum_t,
+                labels, costs, total_cost, log_lookup_table):
+
         changes_count = 0
 
         for j in range(self.n_samples):

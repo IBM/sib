@@ -9,40 +9,32 @@
 #ifndef SIB_OPTIMIZER_SPARSE_H
 #define SIB_OPTIMIZER_SPARSE_H
 
+#include <stdint.h>
+
 class SIBOptimizerSparse {
     public:
-        int n_samples;
-        int n_clusters;
-        int n_features;
-
-        const int* csr_indices;
-        const int* csr_indptr;
-        const double* py_x_data;
-        const double* pyx_data;
-
-        const double* py_x_kl;
-
-        const double *px;
-
-        double inv_beta;
-        bool use_inv_beta;
-
-        SIBOptimizerSparse(int n_samples, int n_clusters, int n_features,
-                           const int* csr_indices, const int* csr_indptr,
-                           const double* py_x_data, const double* pyx_data,
-                           const double* py_x_kl, const double* px, double inv_beta);
+        SIBOptimizerSparse(int32_t n_clusters, int32_t n_features);
         virtual ~SIBOptimizerSparse();
 
-        double run(int* x_permutation, int* pt_x, double* pt, int* t_size,
-                   double* pyx_sum, double* ity, double *ht);
-
-        double calc_labels_costs_score(const double* pt, const double* pyx_sum, int n_samples,
-                                       const int* py_x_indices, const int* py_x_indptr, const double* py_x_data,
-                                       int* labels, double* costs, bool infer_mode);
+        void iterate(
+            bool clustering_mode, // clustering / classification mode:
+            // data to cluster / classify:
+            int32_t n_samples, const int32_t *xy_indices, const int32_t *xy_indptr,
+            const int64_t *xy_data, int64_t sum_xy, const int64_t* sum_x,
+            int32_t* x_permutation,   // order of iteration:
+            // current clusters:
+            int32_t *t_size, int64_t *sum_t, int64_t *cent_sum_t,
+            // assigned labels and costs:
+            int32_t *labels, double* costs, double* total_cost,
+            // stats on updates:
+            double* ity, double* ht, double* change_rate,
+            // lookup table for log2
+            const double* log_lookup_table);
 
     private:
-        double calc_merge_cost(const double *pyx_sum, const double *pt, int t, double px,
-                               const int* indices, const double* py_x_data, size_t x_size, double py_x_kl1);
+        int32_t n_clusters;
+        int32_t n_features;
+        double *log_lookup_table;
 };
 
 #endif

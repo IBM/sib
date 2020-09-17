@@ -8,7 +8,7 @@
 
 from .c_sib_optimizer_sparse cimport SIBOptimizerSparse
 
-from libcpp cimport bool
+from libc.stdint cimport int32_t, int64_t
 
 cimport cython
 @cython.boundscheck(False)
@@ -20,31 +20,49 @@ cimport cython
 cdef class CSIBOptimizerSparse:
     cdef SIBOptimizerSparse* c_sib_optimizer  # hold a pointer to the C++ instance which we're wrapping
 
-    def __cinit__(self, int n_samples, int n_clusters, int n_features,
-                  const int[::1] csr_indices, const int[::1] csr_indptr,
-                  const double[::1] py_x_data, const double[::1] pyx_data,
-                  const double[::1] py_x_kl, const double[::1] px, double inv_beta):
-        self.c_sib_optimizer = new SIBOptimizerSparse(
-            n_samples, n_clusters, n_features,
-            &csr_indices[0], &csr_indptr[0],
-            &py_x_data[0], &pyx_data[0],
-            &py_x_kl[0], &px[0], inv_beta)
+    def __cinit__(self, int32_t n_clusters, int32_t n_features):
+        self.c_sib_optimizer = new SIBOptimizerSparse(n_clusters, n_features)
 
     def __dealloc__(self):
         del self.c_sib_optimizer
 
-    def run(self, int[::1] x_perumutation, int[::1] pt_x, double[::1] pt,
-            int[::1] t_size, double[::1,:] pyx_sum, double ity):
-        cdef double hy;
-        cdef double change_rate = self.c_sib_optimizer.run(
-            &x_perumutation[0], &pt_x[0], &pt[0], &t_size[0], &pyx_sum[0, 0], &ity, &hy)
-        return change_rate, ity, hy
+    def optimize(self, int32_t n_samples, const int32_t[::1] xy_indices,
+                 const int32_t[::1] xy_indptr, const int64_t[::1] xy_data,
+                 int64_t sum_xy, const int64_t[::1] sum_x,
+                 int32_t[::1] x_permutation,
+                 int32_t[::1] t_size, int64_t[::1] sum_t,
+                 int64_t[:,::1] cent_sum_t, int32_t[::1] labels,
+                 double ity, const double[::1] log_lookup_table):
+        cdef double ht = 0
+        cdef double change_rate = 0
+        self.c_sib_optimizer.iterate(True, n_samples, &xy_indices[0],
+                                     &xy_indptr[0], &xy_data[0],
+                                     sum_xy, &sum_x[0],
+                                     &x_permutation[0],
+                                     &t_size[0], &sum_t[0],
+                                     &cent_sum_t[0, 0],
+                                     &labels[0],
+                                     NULL, NULL,  # costs and total cost
+                                     &ity, &ht, &change_rate,
+                                     &log_lookup_table[0])
+        return change_rate, ity, ht
 
-    def calc_labels_costs_score(self, const double[::1] pt, const double[::1,:] pyx_sum,
-                                int n_samples, const int[::1] py_x_indices,
-                                const int[::1] py_x_indptr, const double[::1] py_x_data,
-                                int[::1] labels, double[:,::1] costs, bool infer_mode):
-        return self.c_sib_optimizer.calc_labels_costs_score(&pt[0], &pyx_sum[0, 0], n_samples,
-                                                            &py_x_indices[0], &py_x_indptr[0],
-                                                            &py_x_data[0],
-                                                            &labels[0], &costs[0, 0], infer_mode)
+    def infer(self, int32_t n_samples, const int32_t[::1] xy_indices,
+              const int32_t[::1] xy_indptr, const int64_t[::1] xy_data,
+              int64_t sum_xy, const int64_t[::1] sum_x,
+              int32_t[::1] t_size, int64_t[::1] sum_t,
+              int64_t[:,::1] cent_sum_t,
+              int32_t[::1] labels, double[:,::1] costs,
+              const double[::1] log_lookup_table):
+        cdef double total_cost
+        self.c_sib_optimizer.iterate(False, n_samples, &xy_indices[0],
+                                     &xy_indptr[0], &xy_data[0],
+                                     sum_xy, &sum_x[0],
+                                     NULL,  # permutation
+                                     &t_size[0], &sum_t[0],
+                                     &cent_sum_t[0, 0],
+                                     &labels[0], &costs[0, 0],
+                                     &total_cost,
+                                     NULL, NULL, NULL, # ity, ht and change_rate
+                                     &log_lookup_table[0])
+        return total_cost

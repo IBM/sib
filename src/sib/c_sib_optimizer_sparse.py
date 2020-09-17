@@ -7,19 +7,21 @@ from sib.c_package.c_sib_optimizer_sprase import CSIBOptimizerSparse as CSIBOpti
 
 
 class CSIBOptimizerSparse:
-    def __init__(self, n_samples, n_clusters, n_features, py_x, pyx, py_x_kl, px, inv_beta):
-        self.c_sib_optimizer = CSIBOptimizer(
-            n_samples, n_clusters, n_features,
-            py_x.indices, py_x.indptr,
-            py_x.data, pyx.data,
-            py_x_kl, px, inv_beta)
+    def __init__(self, n_clusters, n_features, n_samples, xy, sum_xy, sum_x):
+        self.c_sib_optimizer = CSIBOptimizer(n_clusters, n_features)
+        self.n_samples = n_samples
+        self.xy = xy
+        self.sum_xy = sum_xy
+        self.sum_x = sum_x
 
-    def run(self, x_permutation, pt_x, pt, t_size, pyx_sum, py_t, ity):
-        return self.c_sib_optimizer.run(x_permutation, pt_x, pt, t_size, pyx_sum, ity)
+    def optimize(self, x_permutation, t_size, sum_t, cent_sum_t, labels, ity, log_lookup_table):
+        return self.c_sib_optimizer.optimize(self.n_samples, self.xy.indices,
+                                             self.xy.indptr, self.xy.data, self.sum_xy,
+                                             self.sum_x, x_permutation, t_size,
+                                             sum_t, cent_sum_t, labels, ity, log_lookup_table)
 
-    def calc_labels_costs_score(self, pt, pyx_sum, py_t, n_samples, py_x, labels, costs, infer_mode):
-        return self.c_sib_optimizer.calc_labels_costs_score(pt, pyx_sum, n_samples, py_x.indices,
-                                                            py_x.indptr, py_x.data, labels, costs, infer_mode)
-
-    def sparse_js(self, p_indices, p_values, q, pi1, pi2):
-        return self.c_sib_optimizer.sparse_js(p_indices, p_values, q, pi1, pi2)
+    def infer(self, n_samples, xy, sum_xy, sum_x, t_size, sum_t,
+              cent_sum_t, labels, costs, log_lookup_table):
+        return self.c_sib_optimizer.infer(n_samples, xy.indices, xy.indptr, xy.data, sum_xy,
+                                          sum_x, t_size, sum_t, cent_sum_t, labels, costs,
+                                          log_lookup_table)

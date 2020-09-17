@@ -9,36 +9,30 @@
 #ifndef SIB_OPTIMIZER_DENSE_H
 #define SIB_OPTIMIZER_DENSE_H
 
+#include <stdint.h>
+
 class SIBOptimizerDense {
     public:
-        int n_samples;
-        int n_clusters;
-        int n_features;
-
-        const double* py_x;
-        const double* pyx;
-
-        const double* py_x_kl;
-
-        const double *px;
-
-        double inv_beta;
-        bool use_inv_beta;
-
-        SIBOptimizerDense(int n_samples, int n_clusters, int n_features,
-                          const double* py_x, const double* pyx,
-                          const double* py_x_kl, const double* px, double inv_beta);
+        SIBOptimizerDense(int32_t n_clusters, int32_t n_features);
         virtual ~SIBOptimizerDense();
 
-        double run(int* x_permutation, int* pt_x, double* pt, int* t_size,
-                   double* pyx_sum, double* py_t, double* ity, double *ht);
-
-        double calc_labels_costs_score(const double* pt, const double* pyx_sum, double* py_t, int n_samples,
-                                       const double* py_x, int* labels, double* costs, bool infer_mode);
-
+        void iterate(
+            bool clustering_mode, // clustering / classification mode
+            // data to cluster / classify:
+            int32_t n_samples, const int64_t *xy_data, int64_t sum_xy, const int64_t* sum_x,
+            int32_t* x_permutation,   // order of iteration
+            // current clusters:
+            int32_t *t_size, int64_t *sum_t, int64_t *cent_sum_t,
+            // assigned labels and costs:
+            int32_t *labels, double* costs, double* total_cost,
+            // stats on updates:
+            double* ity_increase, double* change_rate,
+            // lookup table for log2
+            const double* log_lookup_table);
     private:
-        double calc_merge_cost(const double *py_t_t, const double *pt, int t, double px,
-                               const double* py_x_x, double py_x_kl1);
+        int32_t n_clusters;
+        int32_t n_features;
+        double *log_lookup_table;
 };
 
 #endif

@@ -7,202 +7,141 @@
  */
 
 #include "sib_optimizer_dense.h"
-
 #include <cmath>
-#include <iostream>
 
-#include <stdio.h>
-#include <stdlib.h>
 
 // Overloaded constructor
-SIBOptimizerDense::SIBOptimizerDense(int n_samples, int n_clusters, int n_features,
-                                     const double* py_x, const double* pyx,
-                                     const double* py_x_kl, const double* px, double inv_beta) {
-    this->n_samples = n_samples;
+SIBOptimizerDense::SIBOptimizerDense(int32_t n_clusters, int32_t n_features) {
     this->n_clusters = n_clusters;
     this->n_features = n_features;
-    this->py_x = py_x;
-    this->pyx = pyx;
-    this->py_x_kl = py_x_kl;
-    this->px = px;
-    this->inv_beta = inv_beta;
-    this->use_inv_beta = inv_beta > 0.0001;
 }
+
 
 // Destructor
 SIBOptimizerDense::~SIBOptimizerDense() {}
 
-double SIBOptimizerDense::run(int* x_permutation, int* pt_x, double* pt, int* t_size,
-                              double* pyx_sum, double* py_t, double* ity, double *ht) {
-    int n_changes = 0;
+// sIB iteration over n samples for clustering / classification.
+void SIBOptimizerDense::iterate(
+        // clustering / classification mode:
+        bool clustering_mode,
+        // data to cluster / classify:
+        int32_t n_samples, const int64_t *xy_data, int64_t sum_xy, const int64_t* sum_x,
+        // order of iteration:
+        int32_t* x_permutation,
+        // current clusters:
+        int32_t *t_size, int64_t *sum_t, int64_t *cent_sum_t,
+        // assigned labels and costs:
+        int32_t *labels, double* costs, double* total_cost,
+        // stats on updates:
+        double* ity_increase, double* change_rate,
+        // lookup table for log2
+        const double* log_lookup_table) {
 
-    for (int i=0; i<this->n_samples ; i++) {
-        int x = x_permutation[i];
-        int old_t = pt_x[x];
+    int32_t n_changes = 0;
 
-        // if old_t is a singleton cluster we do not reduce it any further
-        if (t_size[old_t] == 1)
-            continue;
-
-        double px = this->px[x];
-        const double* pyx_x = &this->pyx[n_features * x];
-
-        // ----------- step 1 -  draw x out of its current cluster - old_t
-        // update the pt and t_size arrays
-        pt[old_t] = fmax(0, pt[old_t] - px);
-        t_size[old_t] -= 1;
-        // update the pyx_sum array
-        double* pyx_sum_t = &pyx_sum[this->n_features * old_t];
-        for (int j=0 ; j <  this->n_features; j++) {
-            pyx_sum_t[j] = fmax(0, pyx_sum_t[j] - pyx_x[j]);
-        }
-        // update the py_t array
-        double* py_t_t = &py_t[this->n_features * old_t];
-        double inv_pt_t = 1.0 / pt[old_t];
-        for (int j=0 ; j <  this->n_features; j++) {
-            py_t_t[j] = pyx_sum_t[j] * inv_pt_t;
-        }
-
-        // ----------- step 2 -  calculate the merge costs and find new_t     ---------
-        // get the part of KL1 that relies only on py_x
-        double py_x_kl1 = this->py_x_kl[x];
-        // loop over the centroids and find the one to which we can add x with the minimal increase in cost
-        double min_cost = 0;
-        int min_cost_t = -1;
-        double cost_old_t = 0;
-        const double* py_x_x = &this->py_x[this->n_features * x];
-        for (int t=0 ; t<this->n_clusters ; t++) {
-            double cost = calc_merge_cost(py_t, pt, t, px, py_x_x, py_x_kl1);
-
-            if (min_cost_t == -1 || cost < min_cost) {
-                min_cost_t = t;
-                min_cost = cost;
-            }
-            if (t == old_t) {
-                cost_old_t = cost;
-            }
-        }
-        int new_t = min_cost_t;
-        *ity += cost_old_t - min_cost;
-
-
-        // ----------- step 3 - add x to its new cluster - t_new
-        // update the pt and t_size arrays
-        pt[new_t] += px;
-        t_size[new_t] += 1;
-        // update the pyx_sum array
-        double* pyx_sum_new_t = &pyx_sum[this->n_features * new_t];
-        for (int j=0 ; j <  this->n_features; j++) {
-            pyx_sum_new_t[j] += pyx_x[j];
-        }
-        // update the py_t array
-        double* py_t_new_t = &py_t[this->n_features * new_t];
-        double inv_pt_new_t = 1.0 / pt[new_t];
-        for (int j=0 ; j <  this->n_features; j++) {
-            py_t_new_t[j] = pyx_sum_new_t[j] * inv_pt_new_t;
-        }
-
-
-        // update the pt_x array and changes counter (if need be)
-        if (new_t != old_t) {
-            pt_x[x] = new_t;
-            n_changes += 1;
-        }
-
-    }
-
-    // update ht according to the updated pt
-    double ht_sum = 0.0;
-    for (int t=0 ; t<this->n_clusters ; t++) {
-        double pt_t = pt[t];
-        ht_sum += pt_t * log2(pt_t);
-    }
-    *ht = -ht_sum;
-
-    return this->n_samples > 0 ? n_changes / (double)(this->n_samples) : 0;
-}
-
-double SIBOptimizerDense::calc_labels_costs_score(const double* pt, const double* pyx_sum, double* py_t,
-                                                  int new_n_samples, const double* new_py_x, int* labels,
-                                                  double* costs, bool infer_mode) {
-    double score = 0;
-
-    double infer_mode_px;
-    if (infer_mode) {
-        // in infer mode we assume uniform prior so px is fixed at 1/N
-        // but we increase by 1 since we treat every new sample as a
-        // standalone candidate to be added to the clusters; so px is
-        // updated under the asuumption that we now have N+1 samples.
-        // note that pt does not need to be updated because checking
-        // to which cluster to add an element is always done against
-        // pt that represents N-1 elements. just like when we do a train
-        // as part of the optimization step - we take x out of its
-        // cluster, update pt accordingly, and then check to which
-        // cluster to add it. So at the time of calculating the distances
-        // pt stands for N-1 elements.
-        infer_mode_px = 1.0/(this->n_samples + 1);
+    if (clustering_mode) {
+        *ity_increase = 0;
     } else {
-        infer_mode_px = 0;
+        *total_cost = 0;
     }
 
-    for (int x=0; x<new_n_samples ; x++) {
-        double px = infer_mode ? infer_mode_px : this->px[x];
+    for (int32_t i=0; i<n_samples ; i++) {
+        int32_t x = clustering_mode ? x_permutation[i] : i;
+        int32_t old_t = labels[x];
 
-        // pointer to where we write the result
-        double* costs_x = &costs[this->n_clusters * x];
+        if (clustering_mode && t_size[old_t] == 1) {
+            // skip elements from singleton clusters
+            continue;
+        }
 
-        const double* py_x_x = &new_py_x[this->n_features * x];
+        // obtain local pointers
+        const int64_t* x_data = &xy_data[n_features * x];
+        int64_t sum_x_x = sum_x[x];
 
-        // calculate the part of KL1 that relies only on py_x
-        double py_x_kl1 = 0;
-        for (int j=0 ; j<this->n_features ; j++) {
-            double py_x_x_j = py_x_x[j];
-            if (py_x_x_j>0) {
-                py_x_kl1 += py_x_x_j * log2(py_x_x_j);
+        if (clustering_mode) {
+            // withdraw x from its current cluster
+            t_size[old_t]--;
+            sum_t[old_t] -= sum_x_x;
+            int64_t *cent_sum_t_old_t = &(cent_sum_t[n_features * old_t]);
+            for (int32_t j=0 ; j<n_features ; j++) {
+                cent_sum_t_old_t[j] -= x_data[j];
             }
         }
 
-        // loop over the centroids and find the one to which we can add x with the minimal increase in cost
+        // pointer to the costs array (used only for classification)
+        double* x_costs = clustering_mode ? NULL : &costs[this->n_clusters * x];
+
         double min_cost = 0;
-        int min_cost_t = -1;
-        for (int t=0 ; t<this->n_clusters ; t++) {
-            double cost = calc_merge_cost(py_t, pt, t, px, py_x_x, py_x_kl1);
+        int32_t min_cost_t = -1;
+        double cost_old_t = 0;
+        for (int32_t t=0 ; t<this->n_clusters ; t++) {
+            int64_t *cent_sum_t_t = &(cent_sum_t[n_features * t]);
+            int64_t sum_t_t = sum_t[t];
+            // double log_sum_x_t = log2(sum_x_x+sum_t_t);
+            double log_sum_x_t = log_lookup_table[sum_x_x+sum_t_t];
+            //double log_sum_t_t = log_sum_t[t];
+            double log_sum_t_t = log_lookup_table[sum_t_t];
+            double sum = 0;
+            double sum2 = 0;
+            for (int32_t j=0 ; j<n_features ; j++) {
+                int64_t cent_sum_t_t_j = cent_sum_t_t[j];
+                int64_t x_data_j = x_data[j];
+                int64_t sum_j = x_data_j + cent_sum_t_t_j;
+                //double log_sum_j = log2(sum_j);
+                double log_sum_j = log_lookup_table[sum_j];
+                sum += sum_j * (log_sum_x_t - log_sum_j);
+                // printf("log=%d\n", (int)(sum_j));
+                if (cent_sum_t_t_j > 0) {
+                    //double log_cent_sum_t_t_j = log2(cent_sum_t_t_j);
+                    double log_cent_sum_t_t_j = log_lookup_table[cent_sum_t_t_j];
+                    // printf("log=%d\n", (int)(cent_sum_t_t_j));
+                    sum2 += cent_sum_t_t_j*(log_cent_sum_t_t_j-log_sum_x_t);
+                }
+            }
+            double cost = sum + sum2 + sum_t_t*(log_sum_x_t-log_sum_t_t);
+            cost /= sum_xy;
+
             if (min_cost_t == -1 || cost < min_cost) {
                 min_cost_t = t;
                 min_cost = cost;
             }
-            costs_x[t] = cost;
-        }
-        labels[x] = min_cost_t;
-        score += min_cost;
-    }
-    return score;
-}
 
-inline double SIBOptimizerDense::calc_merge_cost(const double *py_t, const double *pt, int t, double px,
-                                                 const double* py_x_x, double py_x_kl1) {
-    double p_new = px + pt[t];
-    double pi1 = px / p_new;
-    double pi2 = 1 - pi1;
-    const double* py_t_t = &py_t[this->n_features * t];
-    double kl1 = py_x_kl1;
-    double kl2 = 0;
-    for (int j=0 ; j<this->n_features ; j++) {
-        double py_t_t_j = py_t_t[j];
-        double py_x_x_j = py_x_x[j];
-        double average_j = pi1 * py_x_x_j + pi2 * py_t_t_j;
-        if (average_j>0) {
-            double log2_inv_average_j = -log2(average_j);
-            kl1 += py_x_x_j * log2_inv_average_j;
-            if (py_t_t_j>0) {
-                kl2 += py_t_t_j * (log2(py_t_t_j) + log2_inv_average_j);
+            if (clustering_mode) {
+                if (t == old_t) {
+                    cost_old_t = cost;
+                }
+            } else {
+                x_costs[t] = cost;
             }
         }
+
+        int32_t new_t = min_cost_t;
+
+        if (clustering_mode) {
+            // count the increase in information
+            *ity_increase += cost_old_t - min_cost;
+
+            // add x to its new cluster
+            t_size[old_t]++;
+            sum_t[new_t] += sum_x_x;
+            int64_t *cent_sum_t_new_t = &(cent_sum_t[n_features * new_t]);
+            for (int32_t j=0 ; j<n_features ; j++) {
+                cent_sum_t_new_t[j] += x_data[j];
+            }
+
+            if (new_t != old_t) {
+                // update the changes counter
+                n_changes += 1;
+            }
+
+        } else {
+            *total_cost += min_cost;
+        }
+
+        labels[x] = new_t;
     }
-    double js = pi1 * kl1 + pi2 * kl2;
-    if (this->use_inv_beta) {
-        double ent = pi1 * log2(pi1) + pi2 * log2(pi2);
-        js += this->inv_beta * ent;
+
+    if (clustering_mode) {
+        *change_rate = n_samples > 0 ? n_changes / (double)n_samples : 0;
     }
-    return p_new * js;
 }
