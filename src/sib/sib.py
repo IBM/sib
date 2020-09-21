@@ -5,7 +5,6 @@
 
 import copy
 import numpy as np
-from scipy.stats import entropy
 from scipy.sparse import issparse
 from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.preprocessing import normalize
@@ -17,6 +16,7 @@ from .c_sib_optimizer_sparse import CSIBOptimizerSparse
 from .c_sib_optimizer_dense import CSIBOptimizerDense
 
 from time import time
+
 
 class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     """sequential Information Bottleneck (sIB) clustering.
@@ -99,20 +99,15 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         self.optimizer_type = optimizer_type
 
         self.xy = None
-        self.sum_xy = None
-        self.sum_x = None
-        self.log_lookup_table = None
+        self.xy_sum = None
+        self.x_sum = None
+        self.y_sum = None
+        self.xy_log_sum = None
 
-        self.pxy = None
-        self.pyx = None
-        self.py_x = None
-        self.px_y = None
-        self.py_x_kl = None
-        self.py = None
-        self.px = None
         self.ixy = None
         self.hy = None
         self.hx = None
+
         self.n_samples = -1
         self.n_features = -1
 
@@ -157,38 +152,23 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             raise ValueError("n_samples=%d should be >= n_clusters=%d"
                              % (self.n_samples, self.n_clusters))
 
-        t0 = time()
-        self.xy = x
-        self.sum_xy = x.data.sum()
-        self.sum_x = x.sum(axis=1).A.ravel()
-        print(self.sum_xy)
-        self.log_lookup_table = np.empty(self.sum_xy + 1)
-        self.log_lookup_table[0] = 0
-        self.log_lookup_table[1:] = np.log2(np.arange(1, self.sum_xy + 1))
-        print("time: %.3f" % (time() - t0))
+        if x.min() < 0:
+            raise ValueError("X's values should be >= 0")
 
-        # each sample is treated as a probability vector over the vocabulary
-        self.px_y = normalize(x, norm='l1', axis=1, copy=True, return_norm=False)
-        self.py_x = self.px_y.T
-        self.pxy = self.px_y / np.sum(self.px_y) if self.uniform_prior else x / np.sum(x)
-        self.pyx = self.pxy.T
-        self.px = self.pxy.sum(axis=1)
-        self.py = self.pxy.sum(axis=0)
-        if issparse(x):
-            self.px = self.px.A1
-            self.py = self.py.A1
-        self.ixy, self.hx, self.hy = self.calc_mi_entropy(self.pxy, self.px, self.py)
-
-        if issparse(x):
-            indptr = self.py_x.indptr
-            data = self.py_x.data
-            self.py_x_kl = np.fromiter((-entropy(data[indptr[i]:indptr[i + 1]], base=2)
-                                        for i in range(len(indptr) - 1)), float, self.n_samples)
+        if self.uniform_prior or not np.issubdtype(x.dtype, np.integer):
+            # normalize to assign each sample with the same probability
+            self.xy = normalize(x, norm='l1', axis=1, copy=True, return_norm=False)
+            self.xy_sum = self.xy.data.sum()
+            self.x_sum = np.ones(self.n_samples, dtype=np.int64)
         else:
-            self.py_x_kl = -entropy(self.py_x, base=2, axis=0)
+            self.xy = x
+            self.xy_sum = self.xy.data.sum()
+            self.x_sum = self.xy.sum(axis=1).A.ravel()
 
-        # print("%.8f, %.8f, %.8f" % (self.ixy, self.hx, self.hy))
-        # self.dump_probs()
+        self.y_sum = self.xy.sum(axis=0).A.ravel()
+        self.xy_log_sum = np.log2(self.xy_sum)
+        self.ixy, self.hx, self.hy = self.calc_mi_entropy(self.xy, self.xy_sum, self.x_sum,
+                                                          self.y_sum, self.xy_log_sum)
 
         random_state = check_random_state(self.random_state)
 
@@ -226,18 +206,17 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         self.score_ = best_partition.score
         self.inertia_ = -self.score_
         self.n_iter_ = best_partition.n_iter
-        self.cluster_centers_ = best_partition.pyx_sum / best_partition.pt
+        self.cluster_centers_ = best_partition.t_cent_sum / best_partition.t_sum[:, None]
         self.labels_, self.costs_, _ = self.calc_labels_costs_score(
-            self.n_samples, self.xy, self.sum_xy, self.sum_x)
+            self.n_samples, self.xy, self.xy_sum, self.x_sum)
         return self
 
     def sib_single(self, random_state, job_id=None, run_id=None):
         # initialization: random generator, partition and optimizers
         random_state = check_random_state(random_state)
-        partition = Partition(self.n_samples, self.n_features,
-                              self.n_clusters, self.xy, self.sum_x,
-                              self.sum_xy,
-                              self.px, self.pyx, random_state)
+        partition = Partition(self.n_samples, self.n_features, self.n_clusters,
+                              self.xy, self.x_sum, self.xy_sum, self.xy_log_sum,
+                              self.hy, random_state)
         optimizer, v_optimizer = self.create_optimizers()
 
         # main loop of optimizing the partition
@@ -256,21 +235,23 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         return partition
 
     def create_c_optimizer(self):
-        if issparse(self.py_x):
+        if issparse(self.xy):
             return CSIBOptimizerSparse(self.n_clusters, self.n_features,
                                        self.n_samples, self.xy,
-                                       self.sum_xy, self.sum_x)
+                                       self.xy_sum, self.x_sum)
         else:
-            return CSIBOptimizerDense(self.n_samples, self.n_clusters)
+            pass
+            # return CSIBOptimizerDense(self.n_samples, self.n_clusters)
 
     def create_p_optimizer(self):
-        if issparse(self.py_x):
+        if issparse(self.xy):
             return PSIBOptimizerSparse(self.n_clusters, self.n_features,
                                        self.n_samples, self.xy,
-                                       self.sum_xy, self.sum_x)
+                                       self.xy_sum, self.x_sum)
         else:
-            return PSIBOptimizerDense(self.n_samples, self.n_clusters, self.n_features,
-                                      self.py_x, self.pyx, self.py_x_kl, self.px, self.inv_beta)
+            pass
+            # return PSIBOptimizerDense(self.n_samples, self.n_clusters, self.n_features,
+            #                          self.py_x, self.pyx, self.inv_beta)
 
     def create_optimizers(self):
         if self.optimizer_type == 'C':
@@ -308,17 +289,18 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             v_partition = copy.deepcopy(partition)
 
         partition.change_ratio, partition.ity, partition.ht = optimizer.optimize(
-            x_permutation, partition.t_size, partition.sum_t, partition.cent_sum_t,
-            partition.labels, partition.ity, self.log_lookup_table)
+            x_permutation, partition.t_size, partition.t_sum, partition.t_log_sum,
+            partition.t_cent_sum, partition.labels, partition.ity)
 
         if v_optimizer:
             v_partition.change_ratio, v_partition.ity, v_partition.ht = v_optimizer.optimize(
-                x_permutation, v_partition.t_size, v_partition.sum_t, v_partition.cent_sum_t,
-                v_partition.labels, v_partition.ity, self.log_lookup_table)
+                x_permutation, v_partition.t_size, v_partition.t_sum, v_partition.t_log_sum,
+                v_partition.cent_sum_t, v_partition.labels, v_partition.ity)
             assert np.allclose(partition.labels, v_partition.labels)
             assert np.allclose(partition.change_ratio, v_partition.change_ratio)
-            assert np.allclose(partition.sum_t, v_partition.sum_t)
-            assert np.allclose(partition.cent_sum_t, v_partition.cent_sum_t)
+            assert np.allclose(partition.t_sum, v_partition.sum_t)
+            assert np.allclose(partition.t_log_sum, v_partition.t_log_sum)
+            assert np.allclose(partition.t_cent_sum, v_partition.cent_sum_t)
             assert np.allclose(partition.t_size, v_partition.t_size)
             assert np.allclose(partition.ity, v_partition.ity)
             assert np.allclose(partition.ht, v_partition.ht)
@@ -345,14 +327,12 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             return False
 
     @staticmethod
-    def calc_mi_entropy(pxy, px, py):
-        """returns the mutual information and the entropies of the joint distribution p, where:
-           I(p(x,y)) = sum_{x,y} p(x,y)*log(p(x,y)/p(x)p(y));"""
-        hx, hy = entropy(px, base=2), entropy(py, base=2)
-        nz_pxy = pxy[np.nonzero(pxy)].A1 if issparse(pxy) else pxy[np.nonzero(pxy)]
-        hxy = -np.sum(nz_pxy * np.log2(nz_pxy))
-        i = hx + hy - hxy
-        return i, hx, hy
+    def calc_mi_entropy(xy, xy_sum, x_sum, y_sum, xy_log_sum):
+        hx = -np.dot(x_sum, np.log2(x_sum) - xy_log_sum) / xy_sum
+        hy = -np.dot(y_sum, np.log2(y_sum) - xy_log_sum) / xy_sum
+        xy = xy.data if issparse(xy) else xy[np.nonzero(xy)]
+        hxy = -np.dot(xy, np.log2(xy) - xy_log_sum) / xy_sum
+        return hx + hy - hxy, hx, hy
 
     def calc_labels_costs_score(self, n_samples, xy, sum_xy, sum_x):
         optimizer, v_optimizer = self.create_optimizers()
@@ -360,34 +340,19 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         costs = np.empty((n_samples, self.n_clusters))
         score = optimizer.infer(n_samples, xy, sum_xy, sum_x,
                                 self.partition_.t_size,
-                                self.partition_.sum_t,
-                                self.partition_.cent_sum_t,
-                                labels, costs,
-                                self.log_lookup_table)
+                                self.partition_.t_sum,
+                                self.partition_.t_log_sum,
+                                self.partition_.t_cent_sum,
+                                labels, costs)
         if v_optimizer:
             v_labels = np.empty(n_samples, dtype=np.int32)
             v_costs = np.empty((n_samples, self.n_clusters))
             v_score = v_optimizer.infer(n_samples, xy, sum_xy, sum_x,
                                         self.partition_.t_size,
-                                        self.partition_.sum_t,
-                                        self.partition_.cent_sum_t,
-                                        v_labels, v_costs,
-                                        self.log_lookup_table)
-
-            with open("costs.dat" , "wt") as f:
-                for i in range(self.n_samples):
-                    costs_i = costs[i, :]
-                    for j in range(self.n_clusters):
-                        f.write("%.8f\n" % costs_i[j])
-
-            with open("v_costs.dat" , "wt") as f:
-                for i in range(self.n_samples):
-                    v_costs_i = v_costs[i, :]
-                    for j in range(self.n_clusters):
-                        f.write("%.8f\n" % v_costs_i[j])
-
-
-
+                                        self.partition_.t_sum,
+                                        self.partition_.t_log_sum,
+                                        self.partition_.t_cent_sum,
+                                        v_labels, v_costs)
             assert np.isclose(score, v_score)
             assert np.allclose(costs, v_costs)
             assert np.allclose(labels, v_labels)
@@ -510,58 +475,30 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
         return self.fit_new_data(x)[2]
 
-    def dump_probs(self):
-        with open("py_x_data.dat", "w") as f:
-            for i in self.py_x.data:
-                f.write("%.8f\n" % i)
-        with open("pyx_data.dat", "w") as f:
-            for i in self.pyx.data:
-                f.write("%.8f\n" % i)
-        with open("px.dat", "w") as f:
-            for i in self.px:
-                f.write("%.8f\n" % i)
-        with open("py.dat", "w") as f:
-            for i in self.py:
-                f.write("%.8f\n" % i)
-
 
 class Partition:
-    def __init__(self, n_samples, n_features, n_clusters, xy, sum_x, sum_xy, px, pyx, random_state):
+    def __init__(self, n_samples, n_features, n_clusters, xy, sum_x, xy_sum, xy_log_sum, hy, random_state):
         # Produce a random partition as an initialization point
-        labels = random_state.permutation(np.linspace(0, n_clusters,
-                                                      n_samples,
-                                                      endpoint=False).astype(np.int32))
+        self.labels = random_state.permutation(np.linspace(0, n_clusters, n_samples,
+                                                           endpoint=False).astype(np.int32))
 
         # initialize the data structures based on the labels and the joint distribution
-        self.labels = np.empty(n_samples, dtype=np.int32)
         self.t_size = np.zeros(n_clusters, dtype=np.int32)
-
-        self.sum_t = np.zeros(n_clusters, dtype=np.int64)
-        self.cent_sum_t = np.zeros((n_clusters, n_features), dtype=np.int64)
+        self.t_sum = np.zeros(n_clusters, dtype=sum_x.dtype)
+        self.t_cent_sum = np.zeros((n_clusters, n_features), dtype=xy.dtype)
         for i in range(n_samples):
-            t = labels[i]
+            t = self.labels[i]
             v = xy[i, :]
-            self.labels[i] = t
             self.t_size[t] += 1
-            self.sum_t[t] += sum_x[i]
-            self.cent_sum_t[t, v.indices] += v.data
-        self.log_sum_t = np.log2(self.sum_t)
-
-        self.pt = np.empty(n_clusters)
-        self.pt_x = np.empty(n_samples, dtype=np.int32)
-        self.pyx_sum = np.empty((n_features, n_clusters), order='F')
-        for t in range(n_clusters):
-            indices = np.argwhere(labels == t).flatten()
-            self.pt_x[indices] = t
-            # self.t_size[t] = len(indices)
-            self.pt[t] = px[indices].sum()
-            pyx_sum = pyx[:, indices].sum(axis=1)
-            self.pyx_sum[:, t] = pyx_sum.A1 if issparse(pyx) else pyx_sum
-        self.py_t = self.pyx_sum * (1 / self.pt) if not issparse(pyx) else None
+            self.t_sum[t] += sum_x[i]
+            self.t_cent_sum[t, v.indices] += v.data
+        self.t_log_sum = np.log2(self.t_sum)
 
         # calculate information
-        pxy_sum = self.pyx_sum.T
-        self.ity, self.ht, _ = SIB.calc_mi_entropy(pxy_sum, self.pt, pxy_sum.sum(axis=0))
+        t_cent_sum = self.t_cent_sum[np.nonzero(self.t_cent_sum)]
+        self.ht = -np.dot(self.t_sum, self.t_log_sum - xy_log_sum) / xy_sum
+        self.hty = -np.dot(t_cent_sum, np.log2(t_cent_sum) - xy_log_sum) / xy_sum
+        self.ity = self.ht + hy - self.hty
 
         # more initializations
         self.n_clusters = n_clusters
@@ -573,24 +510,5 @@ class Partition:
         self.convergence_str = None
 
     def __str__(self):
-        return " size: %d\n pt: %s\n counter: %d\n convergence_str: %s" % (
-            self.n_clusters, self.pt, self.n_iter, self.convergence_str)
-
-    def dump(self):
-        with open("%d_labels.dat" % self.n_iter, "w") as f:
-            for i in self.pt_x.data:
-                f.write("%d\n" % i)
-
-        with open("%d_t_size.dat" % self.n_iter, "w") as f:
-            for i in self.t_size:
-                f.write("%d\n" % i)
-
-        with open("%d_pt.dat" % self.n_iter, "w") as f:
-            for i in self.pt:
-                f.write("%.8f\n" % i)
-
-        with open("%d_pyx_sum.dat" % self.n_iter, "w") as f:
-            for i in range(self.n_clusters):
-                pyx_sum_i = self.pyx_sum[:, i]
-                for j in range(self.n_features):
-                    f.write("%.8f\n" % pyx_sum_i[j])
+        return " size: %d\n counter: %d\n convergence_str: %s" % (
+            self.n_clusters, self.n_iter, self.convergence_str)
