@@ -10,8 +10,7 @@ from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.preprocessing import normalize
 from sklearn.utils import check_random_state
 from joblib import Parallel, delayed, effective_n_jobs
-from .p_sib_optimizer_sparse import PSIBOptimizerSparse
-from .p_sib_optimizer_dense import PSIBOptimizerDense
+from .p_sib_optimizer import PSIBOptimizer
 from .c_sib_optimizer_sparse import CSIBOptimizerSparse
 from .c_sib_optimizer_dense import CSIBOptimizerDense
 
@@ -155,17 +154,19 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         if x.min() < 0:
             raise ValueError("X's values should be >= 0")
 
+        sparse = issparse(x)
+
         if self.uniform_prior or not np.issubdtype(x.dtype, np.integer):
             # normalize to assign each sample with the same probability
             self.xy = normalize(x, norm='l1', axis=1, copy=True, return_norm=False)
-            self.xy_sum = self.xy.data.sum()
-            self.x_sum = np.ones(self.n_samples, dtype=np.int64)
         else:
             self.xy = x
-            self.xy_sum = self.xy.data.sum()
-            self.x_sum = self.xy.sum(axis=1).A.ravel()
-
-        self.y_sum = self.xy.sum(axis=0).A.ravel()
+        self.xy_sum = self.xy.data.sum() if sparse else self.xy.sum()
+        if self.uniform_prior or not np.issubdtype(x.dtype, np.integer):
+            self.x_sum = np.ones(self.n_samples, dtype=np.int64)
+        else:
+            self.x_sum = self.xy.sum(axis=1).A.ravel() if sparse else self.xy.sum(axis=1)
+        self.y_sum = self.xy.sum(axis=0).A.ravel() if sparse else self.xy.sum(axis=0)
         self.xy_log_sum = np.log2(self.xy_sum)
         self.ixy, self.hx, self.hy = self.calc_mi_entropy(self.xy, self.xy_sum, self.x_sum,
                                                           self.y_sum, self.xy_log_sum)
@@ -244,14 +245,9 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             # return CSIBOptimizerDense(self.n_samples, self.n_clusters)
 
     def create_p_optimizer(self):
-        if issparse(self.xy):
-            return PSIBOptimizerSparse(self.n_clusters, self.n_features,
-                                       self.n_samples, self.xy,
-                                       self.xy_sum, self.x_sum)
-        else:
-            pass
-            # return PSIBOptimizerDense(self.n_samples, self.n_clusters, self.n_features,
-            #                          self.py_x, self.pyx, self.inv_beta)
+        return PSIBOptimizer(self.n_clusters, self.n_features,
+                             self.n_samples, self.xy,
+                             self.xy_sum, self.x_sum)
 
     def create_optimizers(self):
         if self.optimizer_type == 'C':
@@ -486,12 +482,16 @@ class Partition:
         self.t_size = np.zeros(n_clusters, dtype=np.int32)
         self.t_sum = np.zeros(n_clusters, dtype=sum_x.dtype)
         self.t_cent_sum = np.zeros((n_clusters, n_features), dtype=xy.dtype)
+        sparse = issparse(xy)
         for i in range(n_samples):
             t = self.labels[i]
             v = xy[i, :]
             self.t_size[t] += 1
             self.t_sum[t] += sum_x[i]
-            self.t_cent_sum[t, v.indices] += v.data
+            if sparse:
+                self.t_cent_sum[t, v.indices] += v.data
+            else:
+                self.t_cent_sum[t, :] += v
         self.t_log_sum = np.log2(self.t_sum)
 
         # calculate information
