@@ -32,7 +32,7 @@ cdef class CSIBOptimizerSparse:
                  int32_t[::1] x_permutation,
                  int32_t[::1] t_size, int64_t[::1] sum_t,
                  int64_t[:,::1] cent_sum_t, int32_t[::1] labels,
-                 double ity, const double[::1] log_lookup_table):
+                 double ity):
         cdef double ht = 0
         cdef double change_rate = 0
         self.c_sib_optimizer.iterate(True, n_samples, &xy_indices[0],
@@ -43,8 +43,7 @@ cdef class CSIBOptimizerSparse:
                                      &cent_sum_t[0, 0],
                                      &labels[0],
                                      NULL, NULL,  # costs and total cost
-                                     &ity, &ht, &change_rate,
-                                     &log_lookup_table[0])
+                                     &ity, &ht, &change_rate)
         return change_rate, ity, ht
 
     def infer(self, int32_t n_samples, const int32_t[::1] xy_indices,
@@ -52,8 +51,7 @@ cdef class CSIBOptimizerSparse:
               int64_t sum_xy, const int64_t[::1] sum_x,
               int32_t[::1] t_size, int64_t[::1] sum_t,
               int64_t[:,::1] cent_sum_t,
-              int32_t[::1] labels, double[:,::1] costs,
-              const double[::1] log_lookup_table):
+              int32_t[::1] labels, double[:,::1] costs):
         cdef double total_cost
         self.c_sib_optimizer.iterate(False, n_samples, &xy_indices[0],
                                      &xy_indptr[0], &xy_data[0],
@@ -63,6 +61,5 @@ cdef class CSIBOptimizerSparse:
                                      &cent_sum_t[0, 0],
                                      &labels[0], &costs[0, 0],
                                      &total_cost,
-                                     NULL, NULL, NULL, # ity, ht and change_rate
-                                     &log_lookup_table[0])
+                                     NULL, NULL, NULL) # ity, ht and change_rate
         return total_cost

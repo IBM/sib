@@ -18,10 +18,9 @@ class CSIBOptimizerSparse:
         return self.c_sib_optimizer.optimize(self.n_samples, self.xy.indices,
                                              self.xy.indptr, self.xy.data, self.sum_xy,
                                              self.sum_x, x_permutation, t_size,
-                                             sum_t, cent_sum_t, labels, ity, log_lookup_table)
+                                             sum_t, cent_sum_t, labels, ity)
 
     def infer(self, n_samples, xy, sum_xy, sum_x, t_size, sum_t,
               cent_sum_t, labels, costs, log_lookup_table):
         return self.c_sib_optimizer.infer(n_samples, xy.indices, xy.indptr, xy.data, sum_xy,
-                                          sum_x, t_size, sum_t, cent_sum_t, labels, costs,
-                                          log_lookup_table)
+                                          sum_x, t_size, sum_t, cent_sum_t, labels, costs)

@@ -11,11 +11,12 @@
 
 #include <stdint.h>
 
-class SIBOptimizerSparse {
+class SIBOptimizerInteger {
     public:
-        SIBOptimizerSparse(int32_t n_clusters, int32_t n_features);
+        SIBOptimizerSparse(int32_t n_clusters, int32_t n_features, int32_t n_samples,
+                           const int64_t *xy, int64_t xy_sum, const int64_t *x_sum);
         virtual ~SIBOptimizerSparse();
-
+n_clusters, n_features, n_samples, xy, xy_sum, x_sum
         void iterate(
             bool clustering_mode, // clustering / classification mode:
             // data to cluster / classify:
@@ -27,14 +28,11 @@ class SIBOptimizerSparse {
             // assigned labels and costs:
             int32_t *labels, double* costs, double* total_cost,
             // stats on updates:
-            double* ity, double* ht, double* change_rate,
-            // lookup table for log2
-            const double* log_lookup_table);
+            double* ity, double* ht, double* change_rate);
 
     private:
         int32_t n_clusters;
         int32_t n_features;
-        double *log_lookup_table;
 };
 
 #endif

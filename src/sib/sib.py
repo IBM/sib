@@ -297,12 +297,12 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         if v_optimizer:
             v_partition.change_ratio, v_partition.ity, v_partition.ht = v_optimizer.optimize(
                 x_permutation, v_partition.t_size, v_partition.t_sum, v_partition.t_log_sum,
-                v_partition.cent_sum_t, v_partition.labels, v_partition.ity)
+                v_partition.cent_t_sum, v_partition.labels, v_partition.ity)
             assert np.allclose(partition.labels, v_partition.labels)
             assert np.allclose(partition.change_ratio, v_partition.change_ratio)
-            assert np.allclose(partition.t_sum, v_partition.sum_t)
+            assert np.allclose(partition.t_sum, v_partition.t_sum)
             assert np.allclose(partition.t_log_sum, v_partition.t_log_sum)
-            assert np.allclose(partition.t_cent_sum, v_partition.cent_sum_t)
+            assert np.allclose(partition.t_cent_sum, v_partition.t_cent_sum)
             assert np.allclose(partition.t_size, v_partition.t_size)
             assert np.allclose(partition.ity, v_partition.ity)
             assert np.allclose(partition.ht, v_partition.ht)
@@ -336,11 +336,11 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         hxy = -np.dot(xy, np.log2(xy) - xy_log_sum) / xy_sum
         return hx + hy - hxy, hx, hy
 
-    def infer_labels_costs_score(self, n_samples, xy, sum_xy, sum_x):
+    def infer_labels_costs_score(self, n_samples, xy, xy_sum, x_sum):
         optimizer, v_optimizer = self.create_optimizers()
         labels = np.empty(n_samples, dtype=np.int32)
         costs = np.empty((n_samples, self.n_clusters))
-        score = optimizer.infer(n_samples, xy, sum_xy, sum_x,
+        score = optimizer.infer(n_samples, xy, xy_sum, x_sum,
                                 self.partition_.t_size,
                                 self.partition_.t_sum,
                                 self.partition_.t_log_sum,
@@ -349,7 +349,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         if v_optimizer:
             v_labels = np.empty(n_samples, dtype=np.int32)
             v_costs = np.empty((n_samples, self.n_clusters))
-            v_score = v_optimizer.infer(n_samples, xy, sum_xy, sum_x,
+            v_score = v_optimizer.infer(n_samples, xy, xy_sum, x_sum,
                                         self.partition_.t_size,
                                         self.partition_.t_sum,
                                         self.partition_.t_log_sum,
@@ -478,21 +478,21 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
 
 class Partition:
-    def __init__(self, n_samples, n_features, n_clusters, xy, sum_x, xy_sum, xy_log_sum, hy, random_state):
+    def __init__(self, n_samples, n_features, n_clusters, xy, x_sum, xy_sum, xy_log_sum, hy, random_state):
         # Produce a random partition as an initialization point
         self.labels = random_state.permutation(np.linspace(0, n_clusters, n_samples,
                                                            endpoint=False).astype(np.int32))
 
         # initialize the data structures based on the labels and the joint distribution
         self.t_size = np.zeros(n_clusters, dtype=np.int32)
-        self.t_sum = np.zeros(n_clusters, dtype=sum_x.dtype)
+        self.t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
         self.t_cent_sum = np.zeros((n_clusters, n_features), dtype=xy.dtype)
         sparse = issparse(xy)
         for i in range(n_samples):
             t = self.labels[i]
             v = xy[i, :]
             self.t_size[t] += 1
-            self.t_sum[t] += sum_x[i]
+            self.t_sum[t] += x_sum[i]
             if sparse:
                 self.t_cent_sum[t, v.indices] += v.data
             else:

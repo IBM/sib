@@ -24,5 +24,4 @@ cdef extern from "sib_optimizer_sparse.h":
                 int32_t* x_permutation,
                 int32_t *t_size, int64_t *sum_t, int64_t *cent_sum_t,
                 int32_t *labels, double* costs, double* total_cost,
-                double* ity, double* ht, double* change_rate,
-                const double* log_lookup_table);
+                double* ity, double* ht, double* change_rate);

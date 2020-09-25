@@ -31,9 +31,7 @@ void SIBOptimizerSparse::iterate(
         // assigned labels and costs:
         int32_t *labels, double* costs, double* total_cost,
         // stats on updates:
-        double* ity, double* ht, double* change_rate,
-        // lookup table for log2
-        const double* log_lookup_table) {
+        double* ity, double* ht, double* change_rate) {
 
     int32_t n_changes = 0;
 
@@ -78,18 +76,18 @@ void SIBOptimizerSparse::iterate(
         for (int32_t t=0 ; t<this->n_clusters ; t++) {
             int64_t *cent_sum_t_t = &(cent_sum_t[n_features * t]);
             int64_t sum_t_t = sum_t[t];
-            double log_sum_x_t = log_lookup_table[sum_x_x+sum_t_t];
-            double log_sum_t_t = log_lookup_table[sum_t_t];
+            double log_sum_x_t = log2(sum_x_x+sum_t_t);
+            double log_sum_t_t = log2(sum_t_t);
             double sum1 = 0;
             double sum2 = 0;
             for (int32_t j=0 ; j<x_size ; j++) {
                 int64_t cent_sum_t_t_j = cent_sum_t_t[x_indices[j]];
                 int64_t x_data_j = x_data[j];
                 int64_t sum_j = x_data_j + cent_sum_t_t_j;
-                double log_sum_j = log_lookup_table[sum_j];
+                double log_sum_j = log2(sum_j);
                 sum1 += sum_j * (log_sum_x_t - log_sum_j);
                 if (cent_sum_t_t_j > 0) {
-                    double log_cent_sum_t_t_j = log_lookup_table[cent_sum_t_t_j];
+                    double log_cent_sum_t_t_j = log2(cent_sum_t_t_j);
                     sum2 += cent_sum_t_t_j*(log_cent_sum_t_t_j-log_sum_x_t);
                 }
             }
@@ -142,10 +140,10 @@ void SIBOptimizerSparse::iterate(
 
         // calculate the entropy of the clustering analysis
         double ht_sum = 0.0;
-        double log_sum_xy = log_lookup_table[sum_xy];
+        double log_sum_xy = log2(sum_xy);
         for (int t=0 ; t<this->n_clusters ; t++) {
             int64_t sum_t_t = sum_t[t];
-            ht_sum += sum_t_t * (log_lookup_table[sum_t_t] - log_sum_xy);
+            ht_sum += sum_t_t * (log2(sum_t_t) - log_sum_xy);
         }
         *ht = -ht_sum / (double)sum_xy;
     }
