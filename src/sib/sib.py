@@ -154,20 +154,10 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         if x.min() < 0:
             raise ValueError("X's values should be >= 0")
 
-        sparse = issparse(x)
+        # prepare the values matrix and sum arrays
+        self.xy, self.xy_sum, self.xy_log_sum, self.x_sum, self.y_sum = self.prepare_data(x)
 
-        if self.uniform_prior or not np.issubdtype(x.dtype, np.integer):
-            # normalize to assign each sample with the same probability
-            self.xy = normalize(x, norm='l1', axis=1, copy=True, return_norm=False)
-        else:
-            self.xy = x
-        self.xy_sum = self.xy.data.sum() if sparse else self.xy.sum()
-        if self.uniform_prior or not np.issubdtype(x.dtype, np.integer):
-            self.x_sum = np.ones(self.n_samples, dtype=np.int64)
-        else:
-            self.x_sum = self.xy.sum(axis=1).A.ravel() if sparse else self.xy.sum(axis=1)
-        self.y_sum = self.xy.sum(axis=0).A.ravel() if sparse else self.xy.sum(axis=0)
-        self.xy_log_sum = np.log2(self.xy_sum)
+        # calc the mutual info between x and y as well as the entropy of x and y
         self.ixy, self.hx, self.hy = self.calc_mi_entropy(self.xy, self.xy_sum, self.x_sum,
                                                           self.y_sum, self.xy_log_sum)
 
@@ -208,9 +198,25 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         self.inertia_ = -self.score_
         self.n_iter_ = best_partition.n_iter
         self.cluster_centers_ = best_partition.t_cent_sum / best_partition.t_sum[:, None]
-        self.labels_, self.costs_, _ = self.calc_labels_costs_score(
+        self.labels_, self.costs_, _ = self.infer_labels_costs_score(
             self.n_samples, self.xy, self.xy_sum, self.x_sum)
         return self
+
+    def prepare_data(self, x):
+        if self.uniform_prior:
+            # we normalize by l1 if we are asked to assign each sample with the same probability
+            xy = normalize(x, norm='l1', axis=1, copy=True, return_norm=False)
+        else:
+            # otherwise, we will use the data as-is
+            xy = x
+        x_sum = xy.sum(axis=1)
+        y_sum = xy.sum(axis=0)
+        if issparse(x):
+            x_sum = x_sum.A.ravel()
+            y_sum = y_sum.A.ravel()
+        xy_sum = x_sum.sum()
+        xy_log_sum = np.log2(xy_sum)
+        return xy, xy_sum, xy_log_sum, x_sum, y_sum
 
     def sib_single(self, random_state, job_id=None, run_id=None):
         # initialization: random generator, partition and optimizers
@@ -330,7 +336,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         hxy = -np.dot(xy, np.log2(xy) - xy_log_sum) / xy_sum
         return hx + hy - hxy, hx, hy
 
-    def calc_labels_costs_score(self, n_samples, xy, sum_xy, sum_x):
+    def infer_labels_costs_score(self, n_samples, xy, sum_xy, sum_x):
         optimizer, v_optimizer = self.create_optimizers()
         labels = np.empty(n_samples, dtype=np.int32)
         costs = np.empty((n_samples, self.n_clusters))
@@ -363,13 +369,10 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         if not self.n_samples > 1:
             raise ValueError("n_samples=%d should be > 1" % self.n_samples)
 
-        if not self.uniform_prior:
-            raise ValueError("New data can be fit only when uniform_prior=True")
+        # prepare the values matrix and sum arrays
+        xy, xy_sum, _, x_sum, _ = self.prepare_data(x)
 
-        # each sample is treated as a probability vector over the vocabulary
-        px_y = normalize(x, norm='l1', axis=1, copy=True, return_norm=False)
-        py_x = px_y.T
-        return self.calc_labels_costs_score(n_samples, py_x, infer_mode=True)
+        return self.infer_labels_costs_score(n_samples, xy, xy_sum, x_sum)
 
     def fit_transform(self, x, y=None, sample_weight=None):
         """Compute clustering and transform x to cluster-distance space.
@@ -435,7 +438,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         X_new : array, shape [n_samples, k]
             X transformed in the new space.
         """
-        return self.fit_new_data(x)[1]
+        labels, costs, score = self.fit_new_data(x)
+        return costs
 
     def predict(self, x):
         """Predict the closest cluster each sample in x belongs to.
@@ -469,7 +473,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             The value of x on the algorithm objective.
         """
 
-        return self.fit_new_data(x)[2]
+        labels, costs, score = self.fit_new_data(x)
+        return score
 
 
 class Partition:
