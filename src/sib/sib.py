@@ -197,7 +197,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         self.score_ = best_partition.score
         self.inertia_ = -self.score_
         self.n_iter_ = best_partition.n_iter
-        self.cluster_centers_ = best_partition.t_cent_sum / best_partition.t_sum[:, None]
+        self.cluster_centers_ = best_partition.t_centroid / best_partition.t_sum[:, None]
         self.labels_, self.costs_, _ = self.infer_labels_costs_score(
             self.n_samples, self.xy, self.xy_sum, self.x_sum)
         return self
@@ -292,25 +292,20 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
         partition.change_ratio, partition.ity, partition.ht = optimizer.optimize(
             x_permutation, partition.t_size, partition.t_sum, partition.t_log_sum,
-            partition.t_cent_sum, partition.labels, partition.ity)
+            partition.t_centroid, partition.labels, partition.ity)
 
         if v_optimizer:
             v_partition.change_ratio, v_partition.ity, v_partition.ht = v_optimizer.optimize(
                 x_permutation, v_partition.t_size, v_partition.t_sum, v_partition.t_log_sum,
-                v_partition.cent_t_sum, v_partition.labels, v_partition.ity)
+                v_partition.t_centroid, v_partition.labels, v_partition.ity)
             assert np.allclose(partition.labels, v_partition.labels)
             assert np.allclose(partition.change_ratio, v_partition.change_ratio)
             assert np.allclose(partition.t_sum, v_partition.t_sum)
             assert np.allclose(partition.t_log_sum, v_partition.t_log_sum)
-            assert np.allclose(partition.t_cent_sum, v_partition.t_cent_sum)
+            assert np.allclose(partition.t_centroid, v_partition.t_centroid)
             assert np.allclose(partition.t_size, v_partition.t_size)
             assert np.allclose(partition.ity, v_partition.ity)
             assert np.allclose(partition.ht, v_partition.ht)
-            if partition.py_t is None:
-                assert v_partition.py_t is None
-            else:
-                assert v_partition.py_t is not None
-                assert np.allclose(partition.py_t, v_partition.py_t)
 
         partition.n_iter += 1
         if v_optimizer:
@@ -344,7 +339,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
                                 self.partition_.t_size,
                                 self.partition_.t_sum,
                                 self.partition_.t_log_sum,
-                                self.partition_.t_cent_sum,
+                                self.partition_.t_centroid,
                                 labels, costs)
         if v_optimizer:
             v_labels = np.empty(n_samples, dtype=np.int32)
@@ -353,7 +348,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
                                         self.partition_.t_size,
                                         self.partition_.t_sum,
                                         self.partition_.t_log_sum,
-                                        self.partition_.t_cent_sum,
+                                        self.partition_.t_centroid,
                                         v_labels, v_costs)
             assert np.isclose(score, v_score)
             assert np.allclose(costs, v_costs)
@@ -486,7 +481,7 @@ class Partition:
         # initialize the data structures based on the labels and the joint distribution
         self.t_size = np.zeros(n_clusters, dtype=np.int32)
         self.t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
-        self.t_cent_sum = np.zeros((n_clusters, n_features), dtype=xy.dtype)
+        self.t_centroid = np.zeros((n_clusters, n_features), dtype=xy.dtype)
         sparse = issparse(xy)
         for i in range(n_samples):
             t = self.labels[i]
@@ -494,15 +489,15 @@ class Partition:
             self.t_size[t] += 1
             self.t_sum[t] += x_sum[i]
             if sparse:
-                self.t_cent_sum[t, v.indices] += v.data
+                self.t_centroid[t, v.indices] += v.data
             else:
-                self.t_cent_sum[t, :] += v
+                self.t_centroid[t, :] += v
         self.t_log_sum = np.log2(self.t_sum)
 
         # calculate information
-        t_cent_sum = self.t_cent_sum[np.nonzero(self.t_cent_sum)]
+        t_centroid = self.t_centroid[np.nonzero(self.t_centroid)]
         self.ht = -np.dot(self.t_sum, self.t_log_sum - xy_log_sum) / xy_sum
-        self.hty = -np.dot(t_cent_sum, np.log2(t_cent_sum) - xy_log_sum) / xy_sum
+        self.hty = -np.dot(t_centroid, np.log2(t_centroid) - xy_log_sum) / xy_sum
         self.ity = self.ht + hy - self.hty
 
         # more initializations

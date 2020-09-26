@@ -9,19 +9,19 @@ cdef extern from "sib_optimizer_sparse.cpp":
     pass
 
 from libcpp cimport bool
-from libc.stdint cimport int32_t, int64_t
+from libc.stdint cimport int32_t
 
 
 # Declare the class with cdef
 cdef extern from "sib_optimizer_sparse.h":
-    cdef cppclass SIBOptimizerSparse:
+    cdef cppclass SIBOptimizerSparse[T]:
         SIBOptimizerSparse(int32_t n_clusters, int32_t n_features);
         void iterate(
                 bool clustering_mode,
                 int32_t n_samples, const int32_t *xy_indices,
-                const int32_t *xy_indptr, const int64_t *xy_data,
-                int64_t sum_xy, const int64_t* sum_x,
+                const int32_t *xy_indptr, const T *xy_data,
+                T xy_sum, const T* x_sum,
                 int32_t* x_permutation,
-                int32_t *t_size, int64_t *sum_t, int64_t *cent_sum_t,
+                int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid,
                 int32_t *labels, double* costs, double* total_cost,
                 double* ity, double* ht, double* change_rate);

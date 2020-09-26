@@ -18,20 +18,20 @@ class PSIBOptimizer:
         self.x_sum = x_sum
         self.sparse = issparse(xy)
 
-    def optimize(self, x_permutation, t_size, t_sum, t_log_sum, t_cent_sum,
+    def optimize(self, x_permutation, t_size, t_sum, t_log_sum, t_centroid,
                  labels, ity, ref_labels=None):
         return self.iterate(True, self.n_samples, self.xy, self.xy_sum, self.x_sum,
-                            x_permutation, t_size, t_sum, t_log_sum, t_cent_sum,
+                            x_permutation, t_size, t_sum, t_log_sum, t_centroid,
                             labels, None, ity, ref_labels)
 
     def infer(self, n_samples, xy, xy_sum, x_sum, t_size, t_sum, t_log_sum,
-              t_cent_sum, labels, costs, ref_labels=None):
+              t_centroid, labels, costs, ref_labels=None):
         return self.iterate(False, n_samples, xy, xy_sum, x_sum, None, t_size,
-                            t_sum, t_log_sum, t_cent_sum, labels, costs, None,
+                            t_sum, t_log_sum, t_centroid, labels, costs, None,
                             ref_labels)
 
     def iterate(self, clustering_mode, n_samples, xy, xy_sum, x_sum,
-                x_permutation, t_size, t_sum, t_log_sum, t_cent_sum,
+                x_permutation, t_size, t_sum, t_log_sum, t_centroid,
                 labels, costs, ity, ref_labels=None):
 
         n_changes = 0
@@ -39,13 +39,13 @@ class PSIBOptimizer:
         total_cost = 0
 
         if not self.sparse:
-            log_t_cent_sum = np.log2(t_cent_sum, where=t_cent_sum > 0, out=np.zeros_like(t_cent_sum, dtype=float))
-            log_t_cent_sum_plus_x = np.empty_like(t_cent_sum, dtype=float)
-            log_t_sum_plus_x_sum = np.empty_like(t_sum, dtype=float)
+            t_log_centroid = np.log2(t_centroid, where=t_centroid > 0, out=np.zeros_like(t_centroid, dtype=float))
+            t_log_centroid_plus_x = np.empty_like(t_centroid, dtype=float)
+            t_log_sum_plus_x_sum = np.empty_like(t_sum, dtype=float)
         else:
-            log_t_cent_sum = None
-            log_t_cent_sum_plus_x = None
-            log_t_sum_plus_x_sum = None
+            t_log_centroid = None
+            t_log_centroid_plus_x = None
+            t_log_sum_plus_x_sum = None
 
         for i in range(n_samples):
             x = x_permutation[i] if x_permutation is not None else i
@@ -72,41 +72,41 @@ class PSIBOptimizer:
                 t_log_sum[old_t] = np.log2(t_sum[old_t])
                 if self.sparse:
                     if np.issubdtype(x_data.dtype, np.integer):
-                        t_cent_sum[old_t, x_indices] -= x_data
+                        t_centroid[old_t, x_indices] -= x_data
                     else:
-                        t_cent_sum[old_t, x_indices] = np.clip(t_cent_sum[old_t, x_indices] - x_data,
+                        t_centroid[old_t, x_indices] = np.clip(t_centroid[old_t, x_indices] - x_data,
                                                                a_min=0.0, a_max=None)
                 else:
-                    t_cent_sum_old_t = t_cent_sum[old_t, :]
+                    old_t_centroid = t_centroid[old_t, :]
                     if np.issubdtype(x_data.dtype, np.integer):
-                        t_cent_sum_old_t -= x_data
+                        old_t_centroid -= x_data
                     else:
-                        np.clip(t_cent_sum_old_t - x_data, out=t_cent_sum_old_t, a_min=0.0, a_max=None)
-                    log_t_cent_sum_old_t = log_t_cent_sum[old_t, :]
-                    log_t_cent_sum_old_t.fill(0)
-                    np.log2(t_cent_sum_old_t, where=t_cent_sum_old_t > 0, out=log_t_cent_sum_old_t)
+                        np.clip(old_t_centroid - x_data, out=old_t_centroid, a_min=0.0, a_max=None)
+                    old_t_log_centroid = t_log_centroid[old_t, :]
+                    old_t_log_centroid.fill(0)
+                    np.log2(old_t_centroid, where=old_t_centroid > 0, out=old_t_log_centroid)
 
             if self.sparse:
-                t_cent_sum_x = t_cent_sum[:, x_indices]
+                t_centroid_x = t_centroid[:, x_indices]
                 t_sum_plus_x_sum = t_sum + x_sum_x
-                t_cent_sum_plus_x = t_cent_sum_x + x_data
-                log_t_sum_plus_x_sum = np.log2(t_sum_plus_x_sum)
-                log_t_cent_sum_plus_x = np.log2(t_cent_sum_plus_x)
-                log_t_cent_sum_x = np.log2(t_cent_sum_x, where=t_cent_sum_x > 0,
-                                           out=np.zeros_like(t_cent_sum_x, dtype=float))
-                sum1 = np.einsum('ij,ij->i', t_cent_sum_plus_x, log_t_sum_plus_x_sum[:, None] - log_t_cent_sum_plus_x)
-                sum2 = np.einsum('ij,ij->i', t_cent_sum_x,  log_t_cent_sum_x - log_t_sum_plus_x_sum[:, None])
-                tmp_costs = sum1 + sum2 + t_sum * (log_t_sum_plus_x_sum - t_log_sum)
+                t_centroid_plus_x = t_centroid_x + x_data
+                t_log_sum_plus_x_sum = np.log2(t_sum_plus_x_sum)
+                t_log_centroid_plus_x = np.log2(t_centroid_plus_x)
+                log_t_centroid_x = np.log2(t_centroid_x, where=t_centroid_x > 0,
+                                           out=np.zeros_like(t_centroid_x, dtype=float))
+                sum1 = np.einsum('ij,ij->i', t_centroid_plus_x, t_log_sum_plus_x_sum[:, None] - t_log_centroid_plus_x)
+                sum2 = np.einsum('ij,ij->i', t_centroid_x,  log_t_centroid_x - t_log_sum_plus_x_sum[:, None])
+                tmp_costs = sum1 + sum2 + t_sum * (t_log_sum_plus_x_sum - t_log_sum)
                 tmp_costs /= xy_sum
             else:
                 t_sum_plus_x_sum = t_sum + x_sum_x
-                t_cent_sum_plus_x = t_cent_sum + x_data
-                log_t_cent_sum_plus_x.fill(0)
-                log_t_sum_plus_x_sum.fill(0)
-                np.log2(t_cent_sum_plus_x, out=log_t_cent_sum_plus_x, where=t_cent_sum_plus_x > 0)
-                np.log2(t_sum_plus_x_sum, out=log_t_sum_plus_x_sum, where=t_sum_plus_x_sum > 0)
-                sum1 = np.einsum('ij,ij->i', t_cent_sum, log_t_cent_sum - t_log_sum[:, None])
-                sum2 = np.einsum('ij,ij->i', t_cent_sum_plus_x, log_t_cent_sum_plus_x - log_t_sum_plus_x_sum[:, None])
+                t_centroid_plus_x = t_centroid + x_data
+                t_log_centroid_plus_x.fill(0)
+                t_log_sum_plus_x_sum.fill(0)
+                np.log2(t_centroid_plus_x, out=t_log_centroid_plus_x, where=t_centroid_plus_x > 0)
+                np.log2(t_sum_plus_x_sum, out=t_log_sum_plus_x_sum, where=t_sum_plus_x_sum > 0)
+                sum1 = np.einsum('ij,ij->i', t_centroid, t_log_centroid - t_log_sum[:, None])
+                sum2 = np.einsum('ij,ij->i', t_centroid_plus_x, t_log_centroid_plus_x - t_log_sum_plus_x_sum[:, None])
                 tmp_costs = (sum1 - sum2) / xy_sum
 
             new_t = np.argmin(tmp_costs).item()
@@ -125,13 +125,13 @@ class PSIBOptimizer:
                 t_log_sum[new_t] = np.log2(t_sum[new_t])
 
                 if self.sparse:
-                    t_cent_sum[new_t, x_indices] += x_data
+                    t_centroid[new_t, x_indices] += x_data
                 else:
-                    t_cent_sum_new_t = t_cent_sum[new_t, :]
-                    t_cent_sum_new_t += x_data
-                    log_t_cent_sum_new_t = log_t_cent_sum[new_t, :]
-                    log_t_cent_sum_new_t.fill(0)
-                    np.log2(t_cent_sum_new_t, where=t_cent_sum_new_t > 0, out=log_t_cent_sum_new_t)
+                    new_t_centroid = t_centroid[new_t, :]
+                    new_t_centroid += x_data
+                    new_t_log_centroid = t_log_centroid[new_t, :]
+                    new_t_log_centroid.fill(0)
+                    np.log2(new_t_centroid, where=new_t_centroid > 0, out=new_t_log_centroid)
 
                 if new_t != old_t:
                     # update the changes counter
