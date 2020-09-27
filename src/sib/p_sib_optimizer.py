@@ -71,17 +71,10 @@ class PSIBOptimizer:
                 t_sum[old_t] -= x_sum_x
                 t_log_sum[old_t] = np.log2(t_sum[old_t])
                 if self.sparse:
-                    if np.issubdtype(x_data.dtype, np.integer):
-                        t_centroid[old_t, x_indices] -= x_data
-                    else:
-                        t_centroid[old_t, x_indices] = np.clip(t_centroid[old_t, x_indices] - x_data,
-                                                               a_min=0.0, a_max=None)
+                    t_centroid[old_t, x_indices] -= x_data
                 else:
                     old_t_centroid = t_centroid[old_t, :]
-                    if np.issubdtype(x_data.dtype, np.integer):
-                        old_t_centroid -= x_data
-                    else:
-                        np.clip(old_t_centroid - x_data, out=old_t_centroid, a_min=0.0, a_max=None)
+                    old_t_centroid -= x_data
                     old_t_log_centroid = t_log_centroid[old_t, :]
                     old_t_log_centroid.fill(0)
                     np.log2(old_t_centroid, where=old_t_centroid > 0, out=old_t_log_centroid)

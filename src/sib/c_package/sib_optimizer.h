@@ -13,10 +13,10 @@
 
 
 template <typename T>
-class SIBOptimizerSparse {
+class SIBOptimizer {
     public:
-        SIBOptimizerSparse(int32_t n_clusters, int32_t n_features);
-        virtual ~SIBOptimizerSparse();
+        SIBOptimizer(int32_t n_clusters, int32_t n_features);
+        virtual ~SIBOptimizer();
 
         void iterate(bool clustering_mode,                          // clustering / classification mode
                 int32_t n_samples, const int32_t *xy_indices,       // data to cluster / classify

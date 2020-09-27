@@ -5,7 +5,7 @@
 
 # cython: language_level=3, boundscheck=False
 
-cdef extern from "sib_optimizer_sparse.cpp":
+cdef extern from "sib_optimizer.cpp":
     pass
 
 from libcpp cimport bool
@@ -13,9 +13,9 @@ from libc.stdint cimport int32_t
 
 
 # Declare the class with cdef
-cdef extern from "sib_optimizer_sparse.h":
-    cdef cppclass SIBOptimizerSparse[T]:
-        SIBOptimizerSparse(int32_t n_clusters, int32_t n_features);
+cdef extern from "sib_optimizer.h":
+    cdef cppclass SIBOptimizer[T]:
+        SIBOptimizer(int32_t n_clusters, int32_t n_features);
         void iterate(
                 bool clustering_mode,
                 int32_t n_samples, const int32_t *xy_indices,

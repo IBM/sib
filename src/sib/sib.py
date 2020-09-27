@@ -11,8 +11,7 @@ from sklearn.preprocessing import normalize
 from sklearn.utils import check_random_state
 from joblib import Parallel, delayed, effective_n_jobs
 from .p_sib_optimizer import PSIBOptimizer
-from .c_sib_optimizer_sparse import CSIBOptimizerSparse
-from .c_sib_optimizer_dense import CSIBOptimizerDense
+from .c_sib_optimizer import CSIBOptimizer
 
 from time import time
 
@@ -242,13 +241,9 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         return partition
 
     def create_c_optimizer(self):
-        if issparse(self.xy):
-            return CSIBOptimizerSparse(self.n_clusters, self.n_features,
-                                       self.n_samples, self.xy,
-                                       self.xy_sum, self.x_sum)
-        else:
-            pass
-            # return CSIBOptimizerDense(self.n_samples, self.n_clusters)
+        return CSIBOptimizer(self.n_clusters, self.n_features,
+                             self.n_samples, self.xy,
+                             self.xy_sum, self.x_sum)
 
     def create_p_optimizer(self):
         return PSIBOptimizer(self.n_clusters, self.n_features,

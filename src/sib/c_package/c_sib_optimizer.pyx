@@ -6,7 +6,7 @@
 # distutils: language = c++
 # cython: language_level=3
 
-from .c_sib_optimizer_sparse cimport SIBOptimizerSparse
+from .c_sib_optimizer cimport SIBOptimizer
 
 from libc.stdint cimport int32_t, int64_t
 
@@ -19,12 +19,12 @@ cimport cython
 # as an attribute and create a bunch of forwarding methods
 
 # Python extension type.
-cdef class CSIBOptimizerSparseInt:
+cdef class CSIBOptimizerInt:
 
-    cdef SIBOptimizerSparse[int64_t]* c_sib_optimizer  # hold a pointer to the C++ instance which we're wrapping
+    cdef SIBOptimizer[int64_t]* c_sib_optimizer  # hold a pointer to the C++ instance which we're wrapping
 
     def __cinit__(self, int32_t n_clusters, int32_t n_features):
-        self.c_sib_optimizer = new SIBOptimizerSparse[int64_t](n_clusters, n_features)
+        self.c_sib_optimizer = new SIBOptimizer[int64_t](n_clusters, n_features)
 
     def __dealloc__(self):
         del self.c_sib_optimizer
@@ -38,9 +38,10 @@ cdef class CSIBOptimizerSparseInt:
                  int32_t[::1] labels, double ity):
         cdef double ht = 0
         cdef double change_rate = 0
-        self.c_sib_optimizer.iterate(True, n_samples, &xy_indices[0],
-                                     &xy_indptr[0], &xy_data[0],
-                                     xy_sum, &x_sum[0],
+        self.c_sib_optimizer.iterate(True, n_samples,
+                                     &xy_indices[0] if xy_indices is not None else NULL,
+                                     &xy_indptr[0] if xy_indptr is not None else NULL,
+                                     &xy_data[0], xy_sum, &x_sum[0],
                                      &x_permutation[0],
                                      &t_size[0], &t_sum[0],
                                      &t_log_sum[0], &t_centroid[0, 0],
@@ -55,9 +56,10 @@ cdef class CSIBOptimizerSparseInt:
               double[::1] t_log_sum, int64_t[:,::1] t_centroid,
               int32_t[::1] labels, double[:,::1] costs):
         cdef double total_cost
-        self.c_sib_optimizer.iterate(False, n_samples, &xy_indices[0],
-                                     &xy_indptr[0], &xy_data[0],
-                                     xy_sum, &x_sum[0],
+        self.c_sib_optimizer.iterate(False, n_samples,
+                                     &xy_indices[0] if xy_indices is not None else NULL,
+                                     &xy_indptr[0] if xy_indptr is not None else NULL,
+                                     &xy_data[0], xy_sum, &x_sum[0],
                                      NULL,  # permutation
                                      &t_size[0], &t_sum[0],
                                      &t_log_sum[0], &t_centroid[0, 0],
@@ -68,12 +70,12 @@ cdef class CSIBOptimizerSparseInt:
 
 
 # Python extension type.
-cdef class CSIBOptimizerSparseFloat:
+cdef class CSIBOptimizerFloat:
 
-    cdef SIBOptimizerSparse[double]* c_sib_optimizer  # hold a pointer to the C++ instance which we're wrapping
+    cdef SIBOptimizer[double]* c_sib_optimizer  # hold a pointer to the C++ instance which we're wrapping
 
     def __cinit__(self, int32_t n_clusters, int32_t n_features):
-        self.c_sib_optimizer = new SIBOptimizerSparse[double](n_clusters, n_features)
+        self.c_sib_optimizer = new SIBOptimizer[double](n_clusters, n_features)
 
     def __dealloc__(self):
         del self.c_sib_optimizer
@@ -87,9 +89,10 @@ cdef class CSIBOptimizerSparseFloat:
                  int32_t[::1] labels, double ity):
         cdef double ht = 0
         cdef double change_rate = 0
-        self.c_sib_optimizer.iterate(True, n_samples, &xy_indices[0],
-                                     &xy_indptr[0], &xy_data[0],
-                                     xy_sum, &x_sum[0],
+        self.c_sib_optimizer.iterate(True, n_samples,
+                                     &xy_indices[0] if xy_indices is not None else NULL,
+                                     &xy_indptr[0] if xy_indptr is not None else NULL,
+                                     &xy_data[0], xy_sum, &x_sum[0],
                                      &x_permutation[0],
                                      &t_size[0], &t_sum[0],
                                      &t_log_sum[0], &t_centroid[0, 0],
@@ -104,9 +107,10 @@ cdef class CSIBOptimizerSparseFloat:
               double[::1] t_log_sum, double[:,::1] t_centroid,
               int32_t[::1] labels, double[:,::1] costs):
         cdef double total_cost
-        self.c_sib_optimizer.iterate(False, n_samples, &xy_indices[0],
-                                     &xy_indptr[0], &xy_data[0],
-                                     xy_sum, &x_sum[0],
+        self.c_sib_optimizer.iterate(False, n_samples,
+                                     &xy_indices[0] if xy_indices is not None else NULL,
+                                     &xy_indptr[0] if xy_indptr is not None else NULL,
+                                     &xy_data[0], xy_sum, &x_sum[0],
                                      NULL,  # permutation
                                      &t_size[0], &t_sum[0],
                                      &t_log_sum[0], &t_centroid[0, 0],
