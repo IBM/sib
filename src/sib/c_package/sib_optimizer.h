@@ -6,8 +6,8 @@
  *
  */
 
-#ifndef SIB_OPTIMIZER_SPARSE_H
-#define SIB_OPTIMIZER_SPARSE_H
+#ifndef SIB_OPTIMIZER_H
+#define SIB_OPTIMIZER_H
 
 #include <stdint.h>
 
@@ -33,4 +33,5 @@ class SIBOptimizer {
         int32_t n_features;
 };
 
-#endif
+#endif // SIB_OPTIMIZER_H
+
