@@ -37,8 +37,8 @@ else:
 
 
 setup(
-    name="sib",
-    version="0.0.1",
+    name="sib_clustering",
+    version="0.1.0",
     author="Assaf Toledo",
     author_email="assaf.toledo@ibm.com",
     description="sequential Information Bottleneck",
