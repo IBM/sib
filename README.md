@@ -6,7 +6,7 @@
 <!-- [![Build Status](https://travis-ci.org/jjasghar/ibm-cloud-cli.svg?branch=master)](https://travis-ci.org/jjasghar/ibm-cloud-cli) -->
 [![GitHub Actions CI status](https://github.com/ibm/sib/workflows/Build/badge.svg)](https://github.com/ibm/sib/actions)
 
-<!-- Not always needed, but a scope helps the user understand in a short sentance like below, why this repo exists -->
+<!-- Not always needed, but a scope helps the user understand in a short sentence like below, why this repo exists -->
 ## Scope
 
 This project provides an optimized implementation of the text clustering algorithm "sequential Information Bottleneck" (sIB), introduced by [Slonim, Friedman and Tishby (2002)](#reference).
@@ -14,7 +14,7 @@ The algorithm is implemented in Python and C++ and packaged into a python librar
 
 
 
-<!-- A more detailed Usage or detailed explaination of the repository here -->
+<!-- A more detailed Usage or detailed explanation of the repository here -->
 ## Usage
 The main class in this library is `SIB`, which implements the clustering interface of [SciKit Learn][sklearn], providing methods such as `fit()`, `fit_transform()`, `fit_predict()`, etc. 
 
