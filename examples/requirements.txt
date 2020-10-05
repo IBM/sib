@@ -1,4 +1,4 @@
-sib
+sib-clustering
 numpy
 matplotlib
 seaborn

@@ -39,7 +39,7 @@ else:
 
 
 setup(
-    name="sib_clustering",
+    name="sib-clustering",
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     author="Assaf Toledo",
