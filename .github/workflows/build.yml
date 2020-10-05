@@ -28,7 +28,7 @@ jobs:
       matrix:
         os: [ubuntu-18.04, windows-latest, macos-latest]
 
-    env:
+    # env:
       # CIBW_BEFORE_TEST: pip install -r {project}/tests/requirements.txt
       # CIBW_TEST_COMMAND: "pytest {project}/tests"
 
