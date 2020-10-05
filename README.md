@@ -9,7 +9,7 @@
 <!-- Not always needed, but a scope helps the user understand in a short sentance like below, why this repo exists -->
 ## Scope
 
-This project provides an optimized implementation of the text clustering algorithm "sequential Information Bottleneck" (sIB), published by [Slonim, Friedman and Tishby (2002)](#reference).
+This project provides an optimized implementation of the text clustering algorithm "sequential Information Bottleneck" (sIB), introduced by [Slonim, Friedman and Tishby (2002)](#reference).
 The algorithm is implemented in Python and C++. The project is packaged as a python library with access to the C++ implementation using a Cython wrapper.
 
 
