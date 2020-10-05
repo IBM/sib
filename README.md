@@ -10,7 +10,7 @@
 ## Scope
 
 This project provides an optimized implementation of the text clustering algorithm "sequential Information Bottleneck" (sIB), introduced by [Slonim, Friedman and Tishby (2002)](#reference).
-The algorithm is implemented in Python and C++. The project is packaged as a python library with access to the C++ implementation using a Cython wrapper.
+The algorithm is implemented in Python and C++ and packaged into a python library. For a documentation of this implementation see [here](./docs/sib_implementation.pdf).
 
 
 
