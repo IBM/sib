@@ -3,6 +3,8 @@ import platform
 from setuptools import setup
 from setuptools.extension import Extension
 from Cython.Build import cythonize
+import versioneer
+
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -38,7 +40,8 @@ else:
 
 setup(
     name="sib_clustering",
-    version="0.1.0",
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     author="Assaf Toledo",
     author_email="assaf.toledo@ibm.com",
     description="sequential Information Bottleneck",

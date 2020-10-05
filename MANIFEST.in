@@ -2,3 +2,5 @@ include src/sib/c_package/c_sib_optimizer.pyx
 include src/sib/c_package/c_sib_optimizer.pxd
 include src/sib/c_package/sib_optimizer.cpp
 include src/sib/c_package/sib_optimizer.h
+include versioneer.py
+include src/sib/_version.py
