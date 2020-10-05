@@ -5,6 +5,7 @@
 
 import os
 from time import time
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.cluster import KMeans
 from sklearn import metrics
@@ -65,9 +66,9 @@ for algorithm_name in ['kmeans', 'sib']:
     # we set kmeans algorithm to 'full' since it gives better run-time
     n_init = 1 if speed_test_mode else 10
     if algorithm_name is 'kmeans':
-        algorithm = KMeans(n_clusters=n_clusters, n_init=n_init, n_jobs=-1, max_iter=15, algorithm='full')
+        algorithm = KMeans(n_clusters=n_clusters, n_init=n_init, n_jobs=-1, max_iter=300, algorithm='full')
     elif algorithm_name is 'sib':
-        algorithm = SIB(n_clusters=n_clusters, n_init=n_init, n_jobs=-1, max_iter=15)
+        algorithm = SIB(n_clusters=n_clusters, n_init=n_init, n_jobs=-1, max_iter=15, uniform_prior=False)
     else:
         raise ValueError("Unsupported algorithm %s" % algorithm_name)
 

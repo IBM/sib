@@ -3,8 +3,10 @@
 # LICENSE: Apache License 2.0 (Apache-2.0)
 # http://www.apache.org/licenses/LICENSE-2.0
 
+import pickle
 import os
 from time import time
+import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import metrics
 
@@ -16,7 +18,7 @@ import clustering_utils
 # quality and it runs with 4 random initializations. however,
 # if we are interested in evaluating speed, we will use a single
 # initialization. 
-speed_test_mode = False
+speed_test_mode = True
 
 # step 0 - create an output directory if it does not exist
 output_path = os.path.join("output", "ex1")
@@ -30,8 +32,15 @@ print()
 
 # step 2 - represent the clustering data using bow of the 10k most frequent
 # unigrams in the dataset
-vectorizer = CountVectorizer(max_features=10000)
-vectors = vectorizer.fit_transform(texts)
+# vectorizer = CountVectorizer(max_features=10000)
+# vectors = vectorizer.fit_transform(texts)
+
+# with open("data.pkl", "wb") as f:
+#    pickle.dump(vectors, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+with open("data.pkl", "rb") as f:
+    vectors = pickle.load(f)
+
 
 # step 3 - create an instance of sIB and run the actual clustering
 # n_init = the number of random initializations to perform
@@ -40,7 +49,8 @@ vectors = vectorizer.fit_transform(texts)
 clustering_start_t = time()
 n_init = 1 if speed_test_mode else 4
 sib = SIB(n_clusters=n_clusters, random_state=128, n_init=n_init,
-          n_jobs=-1, max_iter=15, verbose=True)
+          n_jobs=-1, max_iter=15, verbose=True, uniform_prior=False,
+          optimizer_type='P')
 sib.fit(vectors)
 clustering_end_t = time()
 
