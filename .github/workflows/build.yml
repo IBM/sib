@@ -12,13 +12,13 @@ name: Build and upload to PyPI
 
 on:
   push:
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
   pull_request:
   release:
     types:
       - published
-    paths-ignore:
-      - 'docs/**'
-      - 'README.md'
 
 jobs:
   build_wheels:
