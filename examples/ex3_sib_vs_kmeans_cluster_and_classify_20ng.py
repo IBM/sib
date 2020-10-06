@@ -93,7 +93,7 @@ for algorithm_name in ['kmeans', 'sib']:
     # them to the clusters we have. we represent them using the vocabulary we
     # induced for the clustering stage, and then classify them to the clusters.
     classification_vectors = vectorizer.transform(classification_texts)
-    print("Created vectors for %d samples for classification" % clustering_vectors.shape[0])
+    print("Created vectors for %d samples for classification" % classification_vectors.shape[0])
     classification_start_t = time()
     classification_predictions_array = algorithm.predict(classification_vectors)
     classification_end_t = time()
@@ -114,7 +114,7 @@ for algorithm_name in ['kmeans', 'sib']:
     # result as follows:
     # the clustering result is a partition of the samples into k (20) clusters.
     # for every predicted label (cluster id), we look at the samples assigned to it,
-    # and check is the most dominant gold label in this population. for example,
+    # and check which is the most dominant gold label in this population. for example,
     # for the samples in cluster id = 3, we may find that the most common gold label 
     # (class id) is 8. subsequently, we rewrite the classification_predictions_array
     # using the aligned class ids.
