@@ -9,9 +9,12 @@
 <!-- Not always needed, but a scope helps the user understand in a short sentence like below, why this repo exists -->
 ## Scope
 
-This project provides an optimized implementation of the text clustering algorithm "sequential Information Bottleneck" (sIB), introduced by [Slonim, Friedman and Tishby (2002)](#reference).
-The algorithm is implemented in Python and C++ and packaged into a python library. For a documentation of this implementation see [here](./docs/sib_implementation.pdf).
+This project provides an efficient implementation of the text clustering algorithm "sequential Information Bottleneck" (sIB), introduced by [Slonim, Friedman and Tishby (2002)](#reference). The project is packaged as a python library with a cython-wrapped C++ extension for the partition optimization code. A pure python implementation is included as well. The implementation is documented [here](./docs/sib_implementation.pdf).
 
+
+## Installation
+
+```pip install sib-clustering```
 
 
 <!-- A more detailed Usage or detailed explanation of the repository here -->
@@ -96,7 +99,7 @@ If you would like to see the detailed LICENSE click [here](LICENSE).
 - Algorithm and pseudo-code: [Slonim, Friedman and Tishby (2002)](#reference)
 - First python implementation: [Daniel Hershcovich](https://danielhers.github.io/)
 - Optimization work: Assaf Toledo and Elad Venezian
-- Maintainer: [Assaf Toledo](https://github.com/assaftibm)
+- Development and maintenance: [Assaf Toledo](https://github.com/assaftibm)
 
 
 <!-- Questions can be useful but optional, this gives you a place to say, "This is how to contact this project maintainers or create PRs -->
