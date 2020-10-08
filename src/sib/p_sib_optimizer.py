@@ -87,8 +87,9 @@ class PSIBOptimizer:
                 t_log_centroid_plus_x = np.log2(t_centroid_plus_x)
                 log_t_centroid_x = np.log2(t_centroid_x, where=t_centroid_x > 0,
                                            out=np.zeros_like(t_centroid_x, dtype=float))
-                sum1 = np.einsum('ij,ij->i', t_centroid_plus_x, t_log_sum_plus_x_sum[:, None] - t_log_centroid_plus_x)
-                sum2 = np.einsum('ij,ij->i', t_centroid_x,  log_t_centroid_x - t_log_sum_plus_x_sum[:, None])
+                # here we replaced np.einsum('ij,ij->i', U, V) with U[:,None,:] @ V[...,None] as it is faster
+                sum1 = (t_centroid_plus_x[:,None,:] @ (t_log_sum_plus_x_sum[:, None] - t_log_centroid_plus_x)[...,None]).ravel()
+                sum2 = (t_centroid_x[:,None,:] @  (log_t_centroid_x - t_log_sum_plus_x_sum[:, None])[...,None]).ravel()
                 tmp_costs = sum1 + sum2 + t_sum * (t_log_sum_plus_x_sum - t_log_sum)
                 tmp_costs /= xy_sum
             else:
@@ -98,8 +99,9 @@ class PSIBOptimizer:
                 t_log_sum_plus_x_sum.fill(0)
                 np.log2(t_centroid_plus_x, out=t_log_centroid_plus_x, where=t_centroid_plus_x > 0)
                 np.log2(t_sum_plus_x_sum, out=t_log_sum_plus_x_sum, where=t_sum_plus_x_sum > 0)
-                sum1 = np.einsum('ij,ij->i', t_centroid, t_log_centroid - t_log_sum[:, None])
-                sum2 = np.einsum('ij,ij->i', t_centroid_plus_x, t_log_centroid_plus_x - t_log_sum_plus_x_sum[:, None])
+                # here we replaced np.einsum('ij,ij->i', U, V) with U[:,None,:] @ V[...,None] as it is faster
+                sum1 = (t_centroid[:,None,:] @ (t_log_centroid - t_log_sum[:, None])[...,None]).ravel()
+                sum2 = (t_centroid_plus_x[:,None,:] @ (t_log_centroid_plus_x - t_log_sum_plus_x_sum[:, None])[...,None]).ravel()
                 tmp_costs = (sum1 - sum2) / xy_sum
 
             new_t = np.argmin(tmp_costs).item()
