@@ -8,6 +8,7 @@
 
 #include "sib_optimizer.h"
 #include <cmath>
+#include <omp.h>
 
 
 // Constructor
@@ -33,7 +34,11 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
 
     int32_t n_changes = 0;
 
-    if (!clustering_mode) {
+    double* x_costs;
+
+    if (clustering_mode) {
+        x_costs = new double[n_clusters];
+    } else {
         *total_cost = 0;
     }
 
@@ -45,6 +50,7 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
 
     bool sparse = xy_indices != NULL;
 
+
     for (int32_t i=0; i<n_samples ; i++) {
         int32_t x = clustering_mode ? x_permutation[i] : i;
         int32_t old_t = labels[x];
@@ -55,7 +61,6 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
         }
 
         // obtain local pointers
-
         if (sparse) {
             x_start = xy_indptr[x];
             x_end = xy_indptr[x + 1];
@@ -65,7 +70,6 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
         } else {
             x_data = &(xy_data[x * n_features]);
         }
-
 
         T x_sum_x = x_sum[x];
 
@@ -80,6 +84,7 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
                     old_t_centroid[x_indices[j]] -= x_data[j];
                 }
             } else {
+                #pragma omp simd
                 for (int32_t j=0 ; j<x_size ; j++) {
                     old_t_centroid[j] -= x_data[j];
                 }
@@ -87,12 +92,11 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
         }
 
         // pointer to the costs array (used only for classification)
-        double* x_costs = clustering_mode ? NULL : &costs[this->n_clusters * x];
+        if (!clustering_mode) {
+            x_costs = &costs[this->n_clusters * x];
+        }
 
-        double min_cost = 0;
-        int32_t min_cost_t = -1;
-        double cost_old_t = 0;
-
+        #pragma omp parallel for
         for (int32_t t=0 ; t<this->n_clusters ; t++) {
             T *t_centroid_t = &(t_centroid[n_features * t]);
             T t_sum_t = t_sum[t];
@@ -130,19 +134,20 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
                 }
                 cost = sum1 - sum2;
             }
-            cost /= xy_sum;
+            x_costs[t] = cost / xy_sum;
+        }
 
+        double min_cost = 0;
+        int32_t min_cost_t = -1;
+        double cost_old_t = 0;
+        for (int32_t t=0 ; t<this->n_clusters ; t++) {
+            double cost = x_costs[t];
             if (min_cost_t == -1 || cost < min_cost) {
                 min_cost_t = t;
                 min_cost = cost;
             }
-
-            if (clustering_mode) {
-                if (t == old_t) {
-                    cost_old_t = cost;
-                }
-            } else {
-                x_costs[t] = cost;
+            if (t == old_t) {
+                cost_old_t = cost;
             }
         }
 
@@ -162,6 +167,7 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
                     new_t_centroid[x_indices[j]] += x_data[j];
                 }
             } else {
+                #pragma omp simd
                 for (int32_t j=0 ; j<x_size ; j++) {
                     new_t_centroid[j] += x_data[j];
                 }
@@ -191,6 +197,8 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
             ht_sum += t_sum_t * (log2(t_sum_t) - log_xy_sum);
         }
         *ht = -ht_sum / (double)xy_sum;
+
+        delete[] x_costs;
     }
 
 }

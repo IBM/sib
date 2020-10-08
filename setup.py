@@ -10,7 +10,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 if platform.system() == "Windows":
-    compile_extra_args = []
+    compile_extra_args = ["/openmp:experimental"]
     link_extra_args = []
 elif platform.system() == "Linux":
     compile_extra_args = ["-O3"]
