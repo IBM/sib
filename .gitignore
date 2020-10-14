@@ -4,4 +4,4 @@ venv/
 dist/
 build/
 output/
-sib.egg-info/
+src/sib_clustering.egg-info/
