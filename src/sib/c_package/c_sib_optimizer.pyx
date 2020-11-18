@@ -29,6 +29,17 @@ cdef class CSIBOptimizerInt:
     def __dealloc__(self):
         del self.c_sib_optimizer
 
+    def init_centroids(self, int32_t n_samples, const int32_t[::1] xy_indices,
+                       const int32_t[::1] xy_indptr, const int64_t[::1] xy_data,
+                       const int64_t[::1] x_sum, int32_t[::1] labels,
+                       int32_t[::1] t_size, int64_t[::1] t_sum,
+                       double[::1] t_log_sum, int64_t[:,::1] t_centroid):
+        self.c_sib_optimizer.init_centroids(n_samples,
+                                            &xy_indices[0] if xy_indices is not None else NULL,
+                                            &xy_indptr[0] if xy_indptr is not None else NULL,
+                                            &xy_data[0], &x_sum[0], &labels[0],
+                                            &t_size[0], &t_sum[0], &t_log_sum[0], &t_centroid[0, 0])
+
     def optimize(self, int32_t n_samples, const int32_t[::1] xy_indices,
                  const int32_t[::1] xy_indptr, const int64_t[::1] xy_data,
                  int64_t xy_sum, const int64_t[::1] x_sum,
@@ -79,6 +90,17 @@ cdef class CSIBOptimizerFloat:
 
     def __dealloc__(self):
         del self.c_sib_optimizer
+
+    def init_centroids(self, int32_t n_samples, const int32_t[::1] xy_indices,
+                       const int32_t[::1] xy_indptr, const double[::1] xy_data,
+                       const double[::1] x_sum, int32_t[::1] labels,
+                       int32_t[::1] t_size, double[::1] t_sum,
+                       double[::1] t_log_sum, double[:,::1] t_centroid):
+        self.c_sib_optimizer.init_centroids(n_samples,
+                                            &xy_indices[0] if xy_indices is not None else NULL,
+                                            &xy_indptr[0] if xy_indptr is not None else NULL,
+                                            &xy_data[0], &x_sum[0], &labels[0],
+                                            &t_size[0], &t_sum[0], &t_log_sum[0], &t_centroid[0, 0])
 
     def optimize(self, int32_t n_samples, const int32_t[::1] xy_indices,
                  const int32_t[::1] xy_indptr, const double[::1] xy_data,
