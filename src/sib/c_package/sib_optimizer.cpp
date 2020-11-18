@@ -19,6 +19,57 @@ SIBOptimizer<T>::SIBOptimizer(int32_t n_clusters, int32_t n_features)
 template <typename T>
 SIBOptimizer<T>::~SIBOptimizer() {}
 
+template <typename T>
+void SIBOptimizer<T>::init_centroids(
+        int32_t n_samples, const int32_t *xy_indices,
+        const int32_t *xy_indptr, const T *xy_data,
+        const T* x_sum, int32_t *labels,
+        int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid) {
+
+    int32_t x_start = 0;
+    int32_t x_end = n_features;
+    int32_t x_size = x_end - x_start;
+    const int32_t* x_indices;
+    const T* x_data;
+
+    bool sparse = xy_indices != NULL;
+
+    for (int32_t x=0; x<n_samples ; x++) {
+        int32_t t = labels[x];
+        t_size[t]++;
+        t_sum[t] += x_sum[x];
+
+        if (sparse) {
+            x_start = xy_indptr[x];
+            x_end = xy_indptr[x + 1];
+            x_size = x_end - x_start;
+            x_indices = &(xy_indices[x_start]);
+            x_data = &(xy_data[x_start]);
+        } else {
+            x_data = &(xy_data[x * n_features]);
+        }
+
+        // update t_centroid
+        T *t_centroid_t = &t_centroid[t * n_features];
+        if (sparse) {
+            for (int32_t j=0 ; j<x_size ; j++) {
+                t_centroid_t[x_indices[j]] += x_data[j];
+            }
+        } else {
+            for (int32_t j=0 ; j<x_size ; j++) {
+                t_centroid_t[j] += x_data[j];
+            }
+        }
+    }
+
+    // set t_log_sum
+    for (int32_t t=0; t<n_clusters ; t++) {
+        t_log_sum[t] = log2(t_sum[t]);
+    }
+
+}
+
+
 // sIB iteration over n samples for clustering / classification.
 template <typename T>
 void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classification mode
@@ -149,8 +200,6 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
         int32_t new_t = min_cost_t;
 
         if (clustering_mode) {
-            // count the increase in information
-            *ity += cost_old_t - min_cost;
 
             // add x to its new cluster
             t_size[new_t]++;
@@ -170,6 +219,9 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
             if (new_t != old_t) {
                 // update the changes counter
                 n_changes++;
+
+                // count the increase in information
+                *ity += cost_old_t - min_cost;
             }
 
         } else {

@@ -22,22 +22,25 @@ class CSIBOptimizer:
         self.xy_sum = xy_sum
         self.x_sum = x_sum
         self.sparse = issparse(xy)
+        self.xy_indices, self.xy_indptr, self.xy_data = self.get_data(self.xy)
+
+    def init_centroids(self, labels, t_size, t_sum, t_log_sum, t_centroid):
+        return self.c_sib_optimizer.init_centroids(self.n_samples, self.xy_indices, self.xy_indptr,
+                                                   self.xy_data, self.x_sum, labels, t_size, t_sum,
+                                                   t_log_sum, t_centroid)
 
     def optimize(self, x_permutation, t_size, t_sum, t_log_sum, t_centroid, labels, ity):
-        if self.sparse:
-            xy_indices = self.xy.indices
-            xy_indptr = self.xy.indptr
-            xy_data = self.xy.data
-        else:
-            xy_indices = None
-            xy_indptr = None
-            xy_data = self.xy.ravel()
-        return self.c_sib_optimizer.optimize(self.n_samples, xy_indices,
-                                             xy_indptr, xy_data, self.xy_sum,
+        return self.c_sib_optimizer.optimize(self.n_samples, self.xy_indices,
+                                             self.xy_indptr, self.xy_data, self.xy_sum,
                                              self.x_sum, x_permutation, t_size, t_sum,
                                              t_log_sum, t_centroid, labels, ity)
 
     def infer(self, n_samples, xy, xy_sum, x_sum, t_size, t_sum, t_log_sum, t_centroid, labels, costs):
+        xy_indices, xy_indptr, xy_data = self.get_data(xy)
+        return self.c_sib_optimizer.infer(n_samples, xy_indices, xy_indptr, xy_data, xy_sum, x_sum,
+                                          t_size, t_sum, t_log_sum, t_centroid, labels, costs)
+
+    def get_data(self, xy):
         if self.sparse:
             xy_indices = xy.indices
             xy_indptr = xy.indptr
@@ -46,5 +49,4 @@ class CSIBOptimizer:
             xy_indices = None
             xy_indptr = None
             xy_data = xy.ravel()
-        return self.c_sib_optimizer.infer(n_samples, xy_indices, xy_indptr, xy_data, xy_sum, x_sum,
-                                          t_size, t_sum, t_log_sum, t_centroid, labels, costs)
+        return xy_indices, xy_indptr, xy_data

@@ -18,6 +18,21 @@ class PSIBOptimizer:
         self.x_sum = x_sum
         self.sparse = issparse(xy)
 
+    def init_centroids(self, labels, t_size, t_sum, t_log_sum, t_centroid):
+        for i in range(self.n_samples):
+            t = labels[i]
+            t_size[t] += 1
+            t_sum[t] += self.x_sum[i]
+            if self.sparse:
+                i_start = self.xy.indptr[i]
+                i_end = self.xy.indptr[i + 1]
+                v_indices = self.xy.indices[i_start:i_end]
+                v_data = self.xy.data[i_start:i_end]
+                t_centroid[t, v_indices] += v_data
+            else:
+                t_centroid[t, :] += self.xy[i, :]
+        np.log2(t_sum, out=t_log_sum)
+
     def optimize(self, x_permutation, t_size, t_sum, t_log_sum, t_centroid,
                  labels, ity, ref_labels=None):
         return self.iterate(True, self.n_samples, self.xy, self.xy_sum, self.x_sum,
@@ -88,8 +103,10 @@ class PSIBOptimizer:
                 log_t_centroid_x = np.log2(t_centroid_x, where=t_centroid_x > 0,
                                            out=np.zeros_like(t_centroid_x, dtype=float))
                 # here we replaced np.einsum('ij,ij->i', U, V) with U[:,None,:] @ V[...,None] as it is faster
-                sum1 = (t_centroid_plus_x[:,None,:] @ (t_log_sum_plus_x_sum[:, None] - t_log_centroid_plus_x)[...,None]).ravel()
-                sum2 = (t_centroid_x[:,None,:] @  (log_t_centroid_x - t_log_sum_plus_x_sum[:, None])[...,None]).ravel()
+                sum1 = (t_centroid_plus_x[:, None, :] @
+                        (t_log_sum_plus_x_sum[:, None] - t_log_centroid_plus_x)[..., None]).ravel()
+                sum2 = (t_centroid_x[:, None, :] @
+                        (log_t_centroid_x - t_log_sum_plus_x_sum[:, None])[..., None]).ravel()
                 tmp_costs = sum1 + sum2 + t_sum * (t_log_sum_plus_x_sum - t_log_sum)
                 tmp_costs /= xy_sum
             else:
@@ -100,8 +117,9 @@ class PSIBOptimizer:
                 np.log2(t_centroid_plus_x, out=t_log_centroid_plus_x, where=t_centroid_plus_x > 0)
                 np.log2(t_sum_plus_x_sum, out=t_log_sum_plus_x_sum, where=t_sum_plus_x_sum > 0)
                 # here we replaced np.einsum('ij,ij->i', U, V) with U[:,None,:] @ V[...,None] as it is faster
-                sum1 = (t_centroid[:,None,:] @ (t_log_centroid - t_log_sum[:, None])[...,None]).ravel()
-                sum2 = (t_centroid_plus_x[:,None,:] @ (t_log_centroid_plus_x - t_log_sum_plus_x_sum[:, None])[...,None]).ravel()
+                sum1 = (t_centroid[:, None, :] @ (t_log_centroid - t_log_sum[:, None])[..., None]).ravel()
+                sum2 = (t_centroid_plus_x[:, None, :] @
+                        (t_log_centroid_plus_x - t_log_sum_plus_x_sum[:, None])[..., None]).ravel()
                 tmp_costs = (sum1 - sum2) / xy_sum
 
             new_t = np.argmin(tmp_costs).item()

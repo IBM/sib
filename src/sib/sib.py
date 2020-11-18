@@ -220,10 +220,10 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     def sib_single(self, random_state, job_id=None, run_id=None):
         # initialization: random generator, partition and optimizers
         random_state = check_random_state(random_state)
+        optimizer, v_optimizer = self.create_optimizers()
         partition = Partition(self.n_samples, self.n_features, self.n_clusters,
                               self.xy, self.x_sum, self.xy_sum, self.xy_log_sum,
-                              self.hy, random_state)
-        optimizer, v_optimizer = self.create_optimizers()
+                              self.hy, random_state, optimizer, v_optimizer)
 
         # main loop of optimizing the partition
         self.report_status(partition, job_id, run_id)
@@ -468,7 +468,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
 
 class Partition:
-    def __init__(self, n_samples, n_features, n_clusters, xy, x_sum, xy_sum, xy_log_sum, hy, random_state):
+    def __init__(self, n_samples, n_features, n_clusters, xy, x_sum, xy_sum,
+                 xy_log_sum, hy, random_state, optimizer, v_optimizer):
         # Produce a random partition as an initialization point
         self.labels = random_state.permutation(np.linspace(0, n_clusters, n_samples,
                                                            endpoint=False).astype(np.int32))
@@ -476,18 +477,20 @@ class Partition:
         # initialize the data structures based on the labels and the joint distribution
         self.t_size = np.zeros(n_clusters, dtype=np.int32)
         self.t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
+        self.t_log_sum = np.empty(n_clusters, dtype=np.float64)
         self.t_centroid = np.zeros((n_clusters, n_features), dtype=xy.dtype)
-        sparse = issparse(xy)
-        for i in range(n_samples):
-            t = self.labels[i]
-            v = xy[i, :]
-            self.t_size[t] += 1
-            self.t_sum[t] += x_sum[i]
-            if sparse:
-                self.t_centroid[t, v.indices] += v.data
-            else:
-                self.t_centroid[t, :] += v
-        self.t_log_sum = np.log2(self.t_sum)
+
+        optimizer.init_centroids(self.labels, self.t_size, self.t_sum, self.t_log_sum, self.t_centroid)
+        if v_optimizer is not None:
+            v_t_size = np.zeros(n_clusters, dtype=np.int32)
+            v_t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
+            v_t_log_sum = np.empty(n_clusters, dtype=np.float64)
+            v_t_centroid = np.zeros((n_clusters, n_features), dtype=xy.dtype)
+            v_optimizer.init_centroids(self.labels, v_t_size, v_t_sum, v_t_log_sum, v_t_centroid)
+            assert np.allclose(self.t_size, v_t_size)
+            assert np.allclose(self.t_sum, v_t_sum)
+            assert np.allclose(self.t_log_sum, v_t_log_sum)
+            assert np.allclose(self.t_centroid, v_t_centroid)
 
         # calculate information
         t_centroid = self.t_centroid[np.nonzero(self.t_centroid)]

@@ -10,7 +10,7 @@
 # init file
 
 # import cython created shared object files
-import sib.c_package # cython with cpp version
+import sib.c_package  # cython with cpp version
 
 # import core functionality
 from .sib import *

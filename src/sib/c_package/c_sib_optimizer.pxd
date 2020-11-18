@@ -16,6 +16,13 @@ from libc.stdint cimport int32_t
 cdef extern from "sib_optimizer.h":
     cdef cppclass SIBOptimizer[T]:
         SIBOptimizer(int32_t n_clusters, int32_t n_features);
+
+        void init_centroids(
+                int32_t n_samples, const int32_t *xy_indices,
+                const int32_t *xy_indptr, const T *xy_data,
+                const T* x_sum, int32_t *labels,
+                int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid);
+
         void iterate(
                 bool clustering_mode,
                 int32_t n_samples, const int32_t *xy_indices,
