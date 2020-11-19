@@ -272,13 +272,12 @@ static inline float fast_log2(float x)    // compute log2(x) by reducing x to [0
 
     const unsigned int or_term[2] = {0x3f800000, 0x3f000000};
     const int sub_term[2] = {127, 126};
-    unsigned int array_index;
 
     float signif, fexp;
     int exp;
     float lg2;
     union { float f; unsigned int i; } ux1, ux2;
-    int greater;
+    int is_greater;
 
     /*
       Approximation of log2(float x)
