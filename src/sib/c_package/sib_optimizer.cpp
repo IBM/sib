@@ -246,3 +246,120 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
     }
 
 }
+
+/*
+   an approximated log2 implementation, copied from:
+   https://tech.ebayinc.com/engineering/fast-approximate-logarithms-part-i-the-basics/
+   https://tech.ebayinc.com/engineering/fast-approximate-logarithms-part-ii-rounding-error/
+   https://tech.ebayinc.com/engineering/fast-approximate-logarithms-part-iii-the-formulas/
+
+   The idea is to reduce the range to [0.75, 1.5) and to use a rational function, such as
+   (ax^2+bx+c)/(dx+e), to approximate log2 on this range.
+
+   We use the code included in the article, which is meant for line 8 in the table therein,
+   with a small change - replacing the "if/else" branch by an array.
+ */
+
+static inline float fast_log2(float x)    // compute log2(x) by reducing x to [0.75, 1.5)
+{
+    /** MODIFY THIS SECTION **/
+    // (x-1)*(a*(x-1) + b)/((x-1) + c) (line 8 of table 2)
+    const float a =   0.338953f;
+    const float b =   2.198599f;
+    const float c =   1.523692f;
+    #define FN  fexp + signif*(a*signif + b)/(signif + c)
+    /** END SECTION  **/
+
+    const unsigned int or_term[2] = {0x3f800000, 0x3f000000};
+    const int sub_term[2] = {127, 126};
+    unsigned int array_index;
+
+    float signif, fexp;
+    int exp;
+    float lg2;
+    union { float f; unsigned int i; } ux1, ux2;
+    int greater;
+
+    /*
+      Approximation of log2(float x)
+
+      General idea:
+      a) Assuming IEEE representation, x's bit structure is:
+         sgn(1):exp(8):frac(23)
+         x = (-1)^sgn * (1 + frac) * 2^(exp - 127)
+         where 1 + frac is called the significand and is in [1.0, 2.0).
+
+         The frac can be thought of as a fixed-point representation of 23 bits. it ranges
+         between 0 (all bits are 0) and 2^23-1 (all bits are 1). So the translation to a float
+         significand obtained by 1 + frac / 2^23. When frac = 0, we get 1 + 0 = 1. And when
+         frac = 2^23-1, we get 1 + (2^23 - 1)/2^23 = 1 + 1 - 1/2^23, which is close to 2.
+         This shows why the significand range is [1, 2).
+
+      b) log2(x) = logs((-1)^sgn * (1 + frac) * 2^(exp - 127))
+                 = logs((-1)^sgn) + log2(1 + frac) +  log2(2^(exp - 127))
+                 = log2(1 + frac) + exp - 127
+
+         Therefore, our job is to calculate log2(1 + frac) for values in [1, 2).
+
+      c) We follow the set of articles listed above and use an optimal rational function.
+         The articles already provide rational functions that were found optimal for significands
+         in the range [0.75, 1.5) and we will use the function from line 8 in the table.
+
+      d) Scaling the range of significands from [1.0, 2.0) to [0.75, 1.5) is done by finding a
+         new representation for x, in the format x = (-1)^sgn * significand_new * 2^(exp_new-127),
+         in which significand_new is in [0.75, 1.5).
+
+         We do this as following:
+
+         case 1) if x's significand is already in [1.0, 1.5], we do not need to do anything and we
+         just set significand_new = significand, exp_new = exp.
+
+         case 2) if x's significand is in (1.5, 2.0), we will scale it to [0.75, 1.0) by:
+         x = (-1)^sgn * significand * 2^(exp-127)
+           = (-1)^sgn * significand * 2^(exp-127) * 2/2
+           = (-1)^sgn * (significand/2) * 2^((exp+1)-127)
+           = (-1)^sgn * (significand_new) * 2^(exp_new-127)
+
+         So in this case we set significand_new = significand/2, and exp_new = exp + 1
+
+         We distinguish between the case based on the 23rd bit in frac. If it is '1', then the
+         value of the significand is greater than 1.5 (case 2). Otherwise, we are in case 1.
+
+      e) The rational function that approximates log2, expects the significand_new and exp_new to
+         be passed as:
+         significand_new: float offset by -1.0,
+         exp_new: float offset by -127.0
+
+      f) To represent significand_new, we create a new number in which the frac bits are taken
+         from x, and the exponent bits are set to either 127 (case 1), or 126 (case 2). By
+         re-interpreting this as a float, we get for case 1: significand_new = significand, and
+         for case 2: significand_new = significand/2.
+         We also reduce '1.0' from significand_new as this helps with rounding errors (see the
+         original articles).
+
+      g) To represent exp_new, we reduce either 127 (case 1) from exp, or 126 (case 2). In case 2,
+         This compensates for dividing the significand by 2.
+
+  */
+
+    // represent x is a union of unsigned int / float for easier bit analysis
+    ux1.f = x;
+
+    // determine if the significand is greater than 1.5 or not - as explained in step d above.
+    is_greater = ux1.i & 0x00400000 >> 22;
+
+    // set the new significand - step f above
+    ux2.i = (ux1.i & 0x007FFFFF) | or_term[is_greater];
+    signif = ux2.f - 1.0f;
+
+    // get x's exponent value
+    exp = (ux1.i & 0x7F800000) >> 23;
+
+    // set the new exponent - step g above
+    fexp = (float)(exp - sub_term[is_greater]);
+
+    // apply FN
+    lg2 = FN;
+
+    return(lg2);
+}
