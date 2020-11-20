@@ -85,7 +85,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     def __init__(self, n_clusters, random_state=None, n_jobs=1,
                  n_init=10, max_iter=15, tol=0.02, verbose=False,
                  inv_beta=0, uniform_prior=True, optimizer_type='C',
-                 float_dtype=np.float32, fast_log=True):
+                 float_dtype=np.float64, fast_log=True):
         self.n_clusters = n_clusters
         self.uniform_prior = uniform_prior
         self.random_state = random_state
