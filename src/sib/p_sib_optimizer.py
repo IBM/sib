@@ -9,7 +9,7 @@ from scipy.sparse import issparse
 
 class PSIBOptimizer:
 
-    def __init__(self, n_clusters, n_features, n_samples, xy, xy_sum, x_sum):
+    def __init__(self, n_clusters, n_features, n_samples, xy, xy_sum, x_sum, float_dtype):
         self.n_clusters = n_clusters
         self.n_features = n_features
         self.n_samples = n_samples
@@ -17,6 +17,7 @@ class PSIBOptimizer:
         self.xy_sum = xy_sum
         self.x_sum = x_sum
         self.sparse = issparse(xy)
+        self.float_dtype = float_dtype
 
     def init_centroids(self, labels, t_size, t_sum, t_log_sum, t_centroid):
         for i in range(self.n_samples):
@@ -54,9 +55,10 @@ class PSIBOptimizer:
         total_cost = 0
 
         if not self.sparse:
-            t_log_centroid = np.log2(t_centroid, where=t_centroid > 0, out=np.zeros_like(t_centroid, dtype=float))
-            t_log_centroid_plus_x = np.empty_like(t_centroid, dtype=float)
-            t_log_sum_plus_x_sum = np.empty_like(t_sum, dtype=float)
+            t_log_centroid = np.log2(t_centroid, where=t_centroid > 0,
+                                     out=np.zeros_like(t_centroid, dtype=self.float_dtype))
+            t_log_centroid_plus_x = np.empty_like(t_centroid, dtype=self.float_dtype)
+            t_log_sum_plus_x_sum = np.empty_like(t_sum, dtype=self.float_dtype)
         else:
             t_log_centroid = None
             t_log_centroid_plus_x = None
@@ -98,28 +100,38 @@ class PSIBOptimizer:
                 t_centroid_x = t_centroid[:, x_indices]
                 t_sum_plus_x_sum = t_sum + x_sum_x
                 t_centroid_plus_x = t_centroid_x + x_data
-                t_log_sum_plus_x_sum = np.log2(t_sum_plus_x_sum)
-                t_log_centroid_plus_x = np.log2(t_centroid_plus_x)
+                t_log_sum_plus_x_sum = np.log2(t_sum_plus_x_sum, dtype=self.float_dtype)
+                t_log_centroid_plus_x = np.log2(t_centroid_plus_x, dtype=self.float_dtype)
                 log_t_centroid_x = np.log2(t_centroid_x, where=t_centroid_x > 0,
-                                           out=np.zeros_like(t_centroid_x, dtype=float))
+                                           out=np.zeros_like(t_centroid_x, dtype=self.float_dtype))
                 # here we replaced np.einsum('ij,ij->i', U, V) with U[:,None,:] @ V[...,None] as it is faster
-                sum1 = (t_centroid_plus_x[:, None, :] @
-                        (t_log_sum_plus_x_sum[:, None] - t_log_centroid_plus_x)[..., None]).ravel()
-                sum2 = (t_centroid_x[:, None, :] @
-                        (log_t_centroid_x - t_log_sum_plus_x_sum[:, None])[..., None]).ravel()
-                tmp_costs = sum1 + sum2 + t_sum * (t_log_sum_plus_x_sum - t_log_sum)
+                sum1 = np.matmul(t_centroid_plus_x[:, None, :],
+                                 (t_log_sum_plus_x_sum[:, None] - t_log_centroid_plus_x)[..., None],
+                                 dtype=self.float_dtype).ravel()
+                sum2 = np.matmul(t_centroid_x[:, None, :],
+                                 (log_t_centroid_x - t_log_sum_plus_x_sum[:, None])[..., None],
+                                 dtype=self.float_dtype).ravel()
+                # sum1 = (t_centroid_plus_x[:, None, :] @
+                #         (t_log_sum_plus_x_sum[:, None] - t_log_centroid_plus_x)[..., None]).ravel()
+                # sum2 = (t_centroid_x[:, None, :] @
+                #         (log_t_centroid_x - t_log_sum_plus_x_sum[:, None])[..., None]).ravel()
+                tmp_costs = sum1 + sum2 + t_sum.astype(self.float_dtype) * (t_log_sum_plus_x_sum - t_log_sum)
                 tmp_costs /= xy_sum
             else:
                 t_sum_plus_x_sum = t_sum + x_sum_x
                 t_centroid_plus_x = t_centroid + x_data
                 t_log_centroid_plus_x.fill(0)
                 t_log_sum_plus_x_sum.fill(0)
-                np.log2(t_centroid_plus_x, out=t_log_centroid_plus_x, where=t_centroid_plus_x > 0)
-                np.log2(t_sum_plus_x_sum, out=t_log_sum_plus_x_sum, where=t_sum_plus_x_sum > 0)
+                np.log2(t_centroid_plus_x, out=t_log_centroid_plus_x,
+                        where=t_centroid_plus_x > 0, dtype=self.float_dtype)
+                np.log2(t_sum_plus_x_sum, out=t_log_sum_plus_x_sum,
+                        where=t_sum_plus_x_sum > 0, dtype=self.float_dtype)
                 # here we replaced np.einsum('ij,ij->i', U, V) with U[:,None,:] @ V[...,None] as it is faster
-                sum1 = (t_centroid[:, None, :] @ (t_log_centroid - t_log_sum[:, None])[..., None]).ravel()
-                sum2 = (t_centroid_plus_x[:, None, :] @
-                        (t_log_centroid_plus_x - t_log_sum_plus_x_sum[:, None])[..., None]).ravel()
+                sum1 = np.matmul(t_centroid[:, None, :], (t_log_centroid - t_log_sum[:, None])[..., None],
+                                 dtype=self.float_dtype).ravel()
+                sum2 = np.matmul(t_centroid_plus_x[:, None, :],
+                                 (t_log_centroid_plus_x - t_log_sum_plus_x_sum[:, None])[..., None],
+                                 dtype=self.float_dtype).ravel()
                 tmp_costs = (sum1 - sum2) / xy_sum
 
             new_t = np.argmin(tmp_costs).item()

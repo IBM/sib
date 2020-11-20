@@ -12,7 +12,7 @@
 #include <stdint.h>
 
 
-template <typename T>
+template <typename T, typename FLOAT_T>
 class SIBOptimizer {
     public:
         SIBOptimizer(int32_t n_clusters, int32_t n_features);
@@ -22,7 +22,7 @@ class SIBOptimizer {
                 int32_t n_samples, const int32_t *xy_indices,
                 const int32_t *xy_indptr, const T *xy_data,
                 const T* x_sum, int32_t *labels,
-                int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid);
+                int32_t *t_size, T *t_sum, FLOAT_T *t_log_sum, T *t_centroid);
 
         void iterate(bool clustering_mode,                          // clustering / classification mode
                 int32_t n_samples, const int32_t *xy_indices,       // data to cluster / classify
@@ -30,9 +30,9 @@ class SIBOptimizer {
                 const T xy_sum, const T *x_sum,
                 int32_t* x_permutation,                             // order of iteration
                 int32_t *t_size, T *t_sum,                          // current clusters
-                double *t_log_sum, T *t_centroid,
-                int32_t *labels, double* costs, double* total_cost, // assigned labels and costs
-                double* ity, double* ht, double* change_rate);      // stats on updates
+                FLOAT_T *t_log_sum, T *t_centroid,
+                int32_t *labels, FLOAT_T* costs, FLOAT_T* total_cost, // assigned labels and costs
+                FLOAT_T* ity, FLOAT_T* ht, FLOAT_T* change_rate);      // stats on updates
 
     private:
         int32_t n_clusters;

@@ -7,16 +7,24 @@ import numpy as np
 from scipy.sparse import issparse
 
 from sib.c_package.c_sib_optimizer import \
-    CSIBOptimizerInt as CSIBOptimizerInt, \
-    CSIBOptimizerFloat as CSIBOptimizerFloat
+    CSIBOptimizerIntFloat as CSIBOptimizerIntFloat, \
+    CSIBOptimizerIntDouble as CSIBOptimizerIntDouble, \
+    CSIBOptimizerFloat as CSIBOptimizerFloat, \
+    CSIBOptimizerDouble as CSIBOptimizerDouble
 
 
 class CSIBOptimizer:
-    def __init__(self, n_clusters, n_features, n_samples, xy, xy_sum, x_sum):
+    def __init__(self, n_clusters, n_features, n_samples, xy, xy_sum, x_sum, float_dtype):
         if np.issubdtype(xy_sum.dtype, np.integer):
-            self.c_sib_optimizer = CSIBOptimizerInt(n_clusters, n_features)
+            if float_dtype == np.float32:
+                self.c_sib_optimizer = CSIBOptimizerIntFloat(n_clusters, n_features)
+            else:
+                self.c_sib_optimizer = CSIBOptimizerIntDouble(n_clusters, n_features)
         else:
-            self.c_sib_optimizer = CSIBOptimizerFloat(n_clusters, n_features)
+            if float_dtype == np.float32:
+                self.c_sib_optimizer = CSIBOptimizerFloat(n_clusters, n_features)
+            else:
+                self.c_sib_optimizer = CSIBOptimizerDouble(n_clusters, n_features)
         self.n_samples = n_samples
         self.xy = xy
         self.xy_sum = xy_sum

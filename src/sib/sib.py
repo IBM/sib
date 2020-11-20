@@ -84,7 +84,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
     def __init__(self, n_clusters, random_state=None, n_jobs=1,
                  n_init=10, max_iter=15, tol=0.02, verbose=False,
-                 inv_beta=0, uniform_prior=True, optimizer_type='C'):
+                 inv_beta=0, uniform_prior=True, optimizer_type='C',
+                 float_dtype=np.float32, fast_log=True):
         self.n_clusters = n_clusters
         self.uniform_prior = uniform_prior
         self.random_state = random_state
@@ -95,6 +96,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         self.verbose = verbose
         self.inv_beta = inv_beta
         self.optimizer_type = optimizer_type
+        self.float_dtype = float_dtype
+        self.fast_log = fast_log
 
         self.xy = None
         self.xy_sum = None
@@ -223,7 +226,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         optimizer, v_optimizer = self.create_optimizers()
         partition = Partition(self.n_samples, self.n_features, self.n_clusters,
                               self.xy, self.x_sum, self.xy_sum, self.xy_log_sum,
-                              self.hy, random_state, optimizer, v_optimizer)
+                              self.hy, random_state, optimizer, v_optimizer, self.float_dtype)
 
         # main loop of optimizing the partition
         self.report_status(partition, job_id, run_id)
@@ -243,12 +246,14 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     def create_c_optimizer(self):
         return CSIBOptimizer(self.n_clusters, self.n_features,
                              self.n_samples, self.xy,
-                             self.xy_sum, self.x_sum)
+                             self.xy_sum, self.x_sum,
+                             self.float_dtype)
 
     def create_p_optimizer(self):
         return PSIBOptimizer(self.n_clusters, self.n_features,
                              self.n_samples, self.xy,
-                             self.xy_sum, self.x_sum)
+                             self.xy_sum, self.x_sum,
+                             self.float_dtype)
 
     def create_optimizers(self):
         if self.optimizer_type == 'C':
@@ -329,7 +334,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     def infer_labels_costs_score(self, n_samples, xy, xy_sum, x_sum):
         optimizer, v_optimizer = self.create_optimizers()
         labels = np.empty(n_samples, dtype=np.int32)
-        costs = np.empty((n_samples, self.n_clusters))
+        costs = np.empty((n_samples, self.n_clusters), dtype=self.float_dtype)
         score = optimizer.infer(n_samples, xy, xy_sum, x_sum,
                                 self.partition_.t_size,
                                 self.partition_.t_sum,
@@ -338,7 +343,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
                                 labels, costs)
         if v_optimizer:
             v_labels = np.empty(n_samples, dtype=np.int32)
-            v_costs = np.empty((n_samples, self.n_clusters))
+            v_costs = np.empty((n_samples, self.n_clusters), dtype=self.float_dtype)
             v_score = v_optimizer.infer(n_samples, xy, xy_sum, x_sum,
                                         self.partition_.t_size,
                                         self.partition_.t_sum,
@@ -469,7 +474,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
 class Partition:
     def __init__(self, n_samples, n_features, n_clusters, xy, x_sum, xy_sum,
-                 xy_log_sum, hy, random_state, optimizer, v_optimizer):
+                 xy_log_sum, hy, random_state, optimizer, v_optimizer, float_dtype):
         # Produce a random partition as an initialization point
         self.labels = random_state.permutation(np.linspace(0, n_clusters, n_samples,
                                                            endpoint=False).astype(np.int32))
@@ -477,14 +482,14 @@ class Partition:
         # initialize the data structures based on the labels and the joint distribution
         self.t_size = np.zeros(n_clusters, dtype=np.int32)
         self.t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
-        self.t_log_sum = np.empty(n_clusters, dtype=np.float64)
+        self.t_log_sum = np.empty(n_clusters, dtype=float_dtype)
         self.t_centroid = np.zeros((n_clusters, n_features), dtype=xy.dtype)
 
         optimizer.init_centroids(self.labels, self.t_size, self.t_sum, self.t_log_sum, self.t_centroid)
         if v_optimizer is not None:
             v_t_size = np.zeros(n_clusters, dtype=np.int32)
             v_t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
-            v_t_log_sum = np.empty(n_clusters, dtype=np.float64)
+            v_t_log_sum = np.empty(n_clusters, dtype=np.float32)
             v_t_centroid = np.zeros((n_clusters, n_features), dtype=xy.dtype)
             v_optimizer.init_centroids(self.labels, v_t_size, v_t_sum, v_t_log_sum, v_t_centroid)
             assert np.allclose(self.t_size, v_t_size)

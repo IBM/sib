@@ -8,23 +8,23 @@
 
 #include "sib_optimizer.h"
 #include <cmath>
-
+// #include <ctgmath>
 
 // Constructor
-template <typename T>
-SIBOptimizer<T>::SIBOptimizer(int32_t n_clusters, int32_t n_features)
+template <typename T, typename FLOAT_T>
+SIBOptimizer<T, FLOAT_T>::SIBOptimizer(int32_t n_clusters, int32_t n_features)
    : n_clusters(n_clusters), n_features(n_features) {}
 
 // Destructor
-template <typename T>
-SIBOptimizer<T>::~SIBOptimizer() {}
+template <typename T, typename FLOAT_T>
+SIBOptimizer<T, FLOAT_T>::~SIBOptimizer() {}
 
-template <typename T>
-void SIBOptimizer<T>::init_centroids(
+template <typename T, typename FLOAT_T>
+void SIBOptimizer<T, FLOAT_T>::init_centroids(
         int32_t n_samples, const int32_t *xy_indices,
         const int32_t *xy_indptr, const T *xy_data,
         const T* x_sum, int32_t *labels,
-        int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid) {
+        int32_t *t_size, T *t_sum, FLOAT_T *t_log_sum, T *t_centroid) {
 
     int32_t x_start = 0;
     int32_t x_end = n_features;
@@ -71,16 +71,16 @@ void SIBOptimizer<T>::init_centroids(
 
 
 // sIB iteration over n samples for clustering / classification.
-template <typename T>
-void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classification mode
+template <typename T, typename FLOAT_T>
+void SIBOptimizer<T, FLOAT_T>::iterate(bool clustering_mode,// clustering / classification mode
         int32_t n_samples, const int32_t *xy_indices,       // data to cluster / classify
         const int32_t *xy_indptr, const T *xy_data,
         const T xy_sum, const T *x_sum,
         int32_t* x_permutation,                             // order of iteration
         int32_t *t_size, T *t_sum,                          // current clusters
-        double *t_log_sum, T *t_centroid,
-        int32_t *labels, double* costs, double* total_cost, // assigned labels and costs
-        double* ity, double* ht, double* change_rate) {     // stats on updates
+        FLOAT_T *t_log_sum, T *t_centroid,
+        int32_t *labels, FLOAT_T* costs, FLOAT_T* total_cost,  // assigned labels and costs
+        FLOAT_T* ity, FLOAT_T* ht, FLOAT_T* change_rate) {     // stats on updates
 
     int32_t n_changes = 0;
 
@@ -138,29 +138,29 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
         }
 
         // pointer to the costs array (used only for classification)
-        double* x_costs = clustering_mode ? NULL : &costs[this->n_clusters * x];
+        FLOAT_T* x_costs = clustering_mode ? NULL : &costs[this->n_clusters * x];
 
-        double min_cost = 0;
+        FLOAT_T min_cost = 0;
         int32_t min_cost_t = -1;
-        double cost_old_t = 0;
+        FLOAT_T cost_old_t = 0;
 
         for (int32_t t=0 ; t<this->n_clusters ; t++) {
             T *t_centroid_t = &(t_centroid[n_features * t]);
             T t_sum_t = t_sum[t];
-            double log_x_sum_plus_t_sum = log2(x_sum_x+t_sum_t);
-            double t_log_sum_t = t_log_sum[t];
-            double sum1 = 0;
-            double sum2 = 0;
-            double cost = 0;
+            FLOAT_T log_x_sum_plus_t_sum = log2(x_sum_x+t_sum_t);
+            FLOAT_T t_log_sum_t = t_log_sum[t];
+            FLOAT_T sum1 = 0;
+            FLOAT_T sum2 = 0;
+            FLOAT_T cost = 0;
             if (sparse) {
                 for (int32_t j=0 ; j<x_size ; j++) {
                     T t_centroid_t_j = t_centroid_t[x_indices[j]];
                     T x_data_j = x_data[j];
                     T t_centroid_plus_x_j = x_data_j + t_centroid_t_j;
-                    double log_t_centroid_plus_x_j = log2(t_centroid_plus_x_j);
+                    FLOAT_T log_t_centroid_plus_x_j = log2(t_centroid_plus_x_j);
                     sum1 += t_centroid_plus_x_j * (log_x_sum_plus_t_sum - log_t_centroid_plus_x_j);
                     if (t_centroid_t_j > 0) {
-                        double log_t_centroid_t_j = log2(t_centroid_t_j);
+                        FLOAT_T log_t_centroid_t_j = log2(t_centroid_t_j);
                         sum2 += t_centroid_t_j*(log_t_centroid_t_j-log_x_sum_plus_t_sum);
                     }
                 }
@@ -171,9 +171,9 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
                     T x_data_j = x_data[j];
                     T t_centroid_plus_x_j = x_data_j + t_centroid_t_j;
                     if (t_centroid_plus_x_j > 0) {
-                        double log_t_centroid_plus_x_j = log2(t_centroid_plus_x_j);
+                        FLOAT_T log_t_centroid_plus_x_j = log2(t_centroid_plus_x_j);
                         if (t_centroid_t_j > 0) {
-                            double log_t_centroid_t_j = log2(t_centroid_t_j);
+                            FLOAT_T log_t_centroid_t_j = log2(t_centroid_t_j);
                             sum1 += t_centroid_t_j*(log_t_centroid_t_j-t_log_sum_t);
                         }
                         sum2 += t_centroid_plus_x_j * (log_t_centroid_plus_x_j - log_x_sum_plus_t_sum);
@@ -233,16 +233,15 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
 
     if (clustering_mode) {
         // calculate the change rate
-        *change_rate = n_samples > 0 ? n_changes / (double)n_samples : 0;
+        *change_rate = n_samples > 0 ? n_changes / (FLOAT_T)n_samples : 0;
 
         // calculate the entropy of the clustering analysis
-        double ht_sum = 0.0;
-        double log_xy_sum = log2(xy_sum);
+        FLOAT_T ht_sum = 0.0;
+        FLOAT_T log_xy_sum = log2(xy_sum);
         for (int t=0 ; t<this->n_clusters ; t++) {
             T t_sum_t = t_sum[t];
             ht_sum += t_sum_t * (log2(t_sum_t) - log_xy_sum);
         }
-        *ht = -ht_sum / (double)xy_sum;
+        *ht = -ht_sum / (FLOAT_T)xy_sum;
     }
-
 }
