@@ -11,7 +11,13 @@
 
 
 // disable the warnings about possible loss of data when converting T to double
-#pragma warning( disable : 4244 )
+#ifdef _MSC_VER
+    #pragma warning( disable : 4244 )
+#endif
+
+// forward declaration
+double fast_log2(double x);
+
 
 // Constructor
 template <typename T>
