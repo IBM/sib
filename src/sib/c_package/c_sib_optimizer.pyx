@@ -23,8 +23,8 @@ cdef class CSIBOptimizerInt:
 
     cdef SIBOptimizer[int64_t]* c_sib_optimizer  # hold a pointer to the C++ instance which we're wrapping
 
-    def __cinit__(self, int32_t n_clusters, int32_t n_features):
-        self.c_sib_optimizer = new SIBOptimizer[int64_t](n_clusters, n_features)
+    def __cinit__(self, int32_t n_clusters, int32_t n_features, bool fast_log):
+        self.c_sib_optimizer = new SIBOptimizer[int64_t](n_clusters, n_features, fast_log)
 
     def __dealloc__(self):
         del self.c_sib_optimizer
@@ -85,8 +85,8 @@ cdef class CSIBOptimizerFloat:
 
     cdef SIBOptimizer[double]* c_sib_optimizer  # hold a pointer to the C++ instance which we're wrapping
 
-    def __cinit__(self, int32_t n_clusters, int32_t n_features):
-        self.c_sib_optimizer = new SIBOptimizer[double](n_clusters, n_features)
+    def __cinit__(self, int32_t n_clusters, int32_t n_features, bool fast_log):
+        self.c_sib_optimizer = new SIBOptimizer[double](n_clusters, n_features, fast_log)
 
     def __dealloc__(self):
         del self.c_sib_optimizer

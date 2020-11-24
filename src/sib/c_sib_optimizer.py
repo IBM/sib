@@ -12,11 +12,11 @@ from sib.c_package.c_sib_optimizer import \
 
 
 class CSIBOptimizer:
-    def __init__(self, n_clusters, n_features, n_samples, xy, xy_sum, x_sum):
+    def __init__(self, n_clusters, n_features, n_samples, xy, xy_sum, x_sum, fast_log):
         if np.issubdtype(xy_sum.dtype, np.integer):
-            self.c_sib_optimizer = CSIBOptimizerInt(n_clusters, n_features)
+            self.c_sib_optimizer = CSIBOptimizerInt(n_clusters, n_features, fast_log)
         else:
-            self.c_sib_optimizer = CSIBOptimizerFloat(n_clusters, n_features)
+            self.c_sib_optimizer = CSIBOptimizerFloat(n_clusters, n_features, fast_log)
         self.n_samples = n_samples
         self.xy = xy
         self.xy_sum = xy_sum

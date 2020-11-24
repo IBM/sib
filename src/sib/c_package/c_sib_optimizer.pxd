@@ -15,7 +15,7 @@ from libc.stdint cimport int32_t
 # Declare the class with cdef
 cdef extern from "sib_optimizer.h":
     cdef cppclass SIBOptimizer[T]:
-        SIBOptimizer(int32_t n_clusters, int32_t n_features);
+        SIBOptimizer(int32_t n_clusters, int32_t n_features, bool fast_log);
 
         void init_centroids(
                 int32_t n_samples, const int32_t *xy_indices,

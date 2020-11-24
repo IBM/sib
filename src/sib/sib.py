@@ -84,7 +84,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
     def __init__(self, n_clusters, random_state=None, n_jobs=1,
                  n_init=10, max_iter=15, tol=0.02, verbose=False,
-                 inv_beta=0, uniform_prior=True, optimizer_type='C'):
+                 inv_beta=0, uniform_prior=True, optimizer_type='C',
+                 fast_log=False):
         self.n_clusters = n_clusters
         self.uniform_prior = uniform_prior
         self.random_state = random_state
@@ -95,6 +96,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         self.verbose = verbose
         self.inv_beta = inv_beta
         self.optimizer_type = optimizer_type
+        self.fast_log = fast_log
 
         self.xy = None
         self.xy_sum = None
@@ -243,7 +245,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     def create_c_optimizer(self):
         return CSIBOptimizer(self.n_clusters, self.n_features,
                              self.n_samples, self.xy,
-                             self.xy_sum, self.x_sum)
+                             self.xy_sum, self.x_sum,
+                             self.fast_log)
 
     def create_p_optimizer(self):
         return PSIBOptimizer(self.n_clusters, self.n_features,
