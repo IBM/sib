@@ -4,7 +4,6 @@
 # http://www.apache.org/licenses/LICENSE-2.0
 
 import os
-import numpy as np
 from time import time
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.cluster import KMeans
@@ -12,7 +11,6 @@ from sklearn import metrics
 from sklearn.metrics import classification_report, accuracy_score
 
 from sib import SIB
-
 import clustering_utils
 
 # we will treat the 20 news groups dataset as a benchmark. it contains
@@ -120,12 +118,15 @@ for algorithm_name in ['kmeans', 'sib']:
     # using the aligned class ids.
     # now we can use sklearn's standard classification metrics to report the 
     # quality of the classification compared to the ground-truth.
-    alignment = clustering_utils.get_alignment(clustering_gold_labels_array, clustering_predictions_array)
-    new_predicted_array = np.zeros_like(classification_predictions_array)
-    for predicted_label, gold_label in alignment.items():
-        predicted_label_indices = np.where(classification_predictions_array == predicted_label)
-        new_predicted_array[predicted_label_indices] = gold_label
-    classification_predictions_array = new_predicted_array
+    # alignment = clustering_utils.get_alignment(clustering_gold_labels_array, clustering_predictions_array)
+    # new_predicted_array = np.zeros_like(classification_predictions_array)
+    # for predicted_label, gold_label in alignment.items():
+    #     predicted_label_indices = np.where(classification_predictions_array == predicted_label)
+    #     new_predicted_array[predicted_label_indices] = gold_label
+    # classification_predictions_array = new_predicted_array
+    classification_predictions_array = clustering_utils.reindex_labels(clustering_gold_labels_array,
+                                                                       clustering_predictions_array,
+                                                                       classification_predictions_array)
 
     print("Classification accuracy: %.2f%%" % (accuracy_score(classification_gold_labels_array,
                                                               classification_predictions_array) * 100))
