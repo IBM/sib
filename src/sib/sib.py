@@ -104,6 +104,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         self.y_sum = None
         self.xy_log_sum = None
 
+        self.sparse = None
+
         self.ixy = None
         self.hy = None
         self.hx = None
@@ -156,7 +158,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             raise ValueError("X's values should be >= 0")
 
         # prepare the values matrix and sum arrays
-        self.xy, self.xy_sum, self.xy_log_sum, self.x_sum, self.y_sum = self.prepare_data(x)
+        self.xy, self.xy_sum, self.xy_log_sum, self.x_sum, self.y_sum, self.sparse = self.prepare_data(x)
 
         # calc the mutual info between x and y as well as the entropy of x and y
         self.ixy, self.hx, self.hy = self.calc_mi_entropy(self.xy, self.xy_sum, self.x_sum,
@@ -210,14 +212,20 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         else:
             # otherwise, we will use the data as-is
             xy = x
+
+        # our c++ code expects double-precision data
+        if xy.dtype == np.float32:
+            xy = xy.astype(np.float64)
+
         x_sum = xy.sum(axis=1)
         y_sum = xy.sum(axis=0)
-        if issparse(x):
+        sparse = issparse(x)
+        if sparse:
             x_sum = x_sum.A.ravel()
             y_sum = y_sum.A.ravel()
         xy_sum = x_sum.sum()
         xy_log_sum = np.log2(xy_sum)
-        return xy, xy_sum, xy_log_sum, x_sum, y_sum
+        return xy, xy_sum, xy_log_sum, x_sum, y_sum, sparse
 
     def sib_single(self, random_state, job_id=None, run_id=None):
         # initialization: random generator, partition and optimizers
@@ -329,6 +337,12 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         hxy = -np.dot(xy, np.log2(xy) - xy_log_sum) / xy_sum
         return hx + hy - hxy, hx, hy
 
+    def is_sparse(self):
+        return self.sparse
+
+    def is_fitted(self):
+        return self.partition_ is not None
+
     def infer_labels_costs_score(self, n_samples, xy, xy_sum, x_sum):
         optimizer, v_optimizer = self.create_optimizers()
         labels = np.empty(n_samples, dtype=np.int32)
@@ -363,7 +377,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             raise ValueError("n_samples=%d should be > 1" % self.n_samples)
 
         # prepare the values matrix and sum arrays
-        xy, xy_sum, _, x_sum, _ = self.prepare_data(x)
+        xy, xy_sum, _, x_sum, _, _ = self.prepare_data(x)
 
         return self.infer_labels_costs_score(n_samples, xy, xy_sum, x_sum)
 
