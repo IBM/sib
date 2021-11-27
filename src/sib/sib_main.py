@@ -10,8 +10,8 @@ from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.preprocessing import normalize
 from sklearn.utils import check_random_state
 from joblib import Parallel, delayed, effective_n_jobs
-from .p_sib_optimizer import PSIBOptimizer
-from .c_sib_optimizer import CSIBOptimizer
+from .sib_optimizer_p import PSIBOptimizer
+from .sib_optimizer_c import CSIBOptimizer
 
 from time import time
 

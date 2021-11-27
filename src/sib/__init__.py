@@ -13,7 +13,7 @@
 import sib.c_package  # cython with cpp version
 
 # import core functionality
-from .sib import *
+from .sib_main import *
 
 
 from ._version import get_versions
