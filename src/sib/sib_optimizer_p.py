@@ -18,8 +18,10 @@ class PSIBOptimizer:
         self.x_sum = x_sum
         self.sparse = issparse(xy)
 
-    def init_centroids(self, labels, t_size, t_sum, t_log_sum, t_centroid):
+    def init_centroids(self, labels, x_ignore, t_size, t_sum, t_log_sum, t_centroid):
         for i in range(self.n_samples):
+            if x_ignore[i]:
+                continue
             t = labels[i]
             t_size[t] += 1
             t_sum[t] += self.x_sum[i]
@@ -34,20 +36,20 @@ class PSIBOptimizer:
         np.log2(t_sum, out=t_log_sum)
 
     def optimize(self, x_permutation, t_size, t_sum, t_log_sum, t_centroid,
-                 labels, ity, ref_labels=None):
+                 labels, locked_in, ity, ref_labels=None):
         return self.iterate(True, self.n_samples, self.xy, self.xy_sum, self.x_sum,
                             x_permutation, t_size, t_sum, t_log_sum, t_centroid,
-                            labels, None, ity, ref_labels)
+                            labels, locked_in, None, ity, ref_labels)
 
     def infer(self, n_samples, xy, xy_sum, x_sum, t_size, t_sum, t_log_sum,
-              t_centroid, labels, costs, ref_labels=None):
+              t_centroid, labels, locked_in, costs, ref_labels=None):
         return self.iterate(False, n_samples, xy, xy_sum, x_sum, None, t_size,
-                            t_sum, t_log_sum, t_centroid, labels, costs, None,
-                            ref_labels)
+                            t_sum, t_log_sum, t_centroid, labels, locked_in,
+                            costs, None, ref_labels)
 
     def iterate(self, clustering_mode, n_samples, xy, xy_sum, x_sum,
                 x_permutation, t_size, t_sum, t_log_sum, t_centroid,
-                labels, costs, ity, ref_labels=None):
+                labels, locked_in, costs, ity, ref_labels=None):
 
         n_changes = 0
 
@@ -64,10 +66,16 @@ class PSIBOptimizer:
 
         for i in range(n_samples):
             x = x_permutation[i] if x_permutation is not None else i
+
+            # if this element is already locked-in, we skip it
+            if locked_in[x]:
+                continue
+
             old_t = labels[x]
 
+            # if t is a singleton cluster we do not reduce it any further
             if clustering_mode and t_size[old_t] == 1:
-                continue  # if t is a singleton cluster we do not reduce it any further
+                continue
 
             # obtain local references
             if self.sparse:
