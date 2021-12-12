@@ -13,8 +13,6 @@ from joblib import Parallel, delayed, effective_n_jobs
 from .sib_optimizer_p import PSIBOptimizer
 from .sib_optimizer_c import CSIBOptimizer
 
-from time import time
-
 
 class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     """sequential Information Bottleneck (sIB) clustering.
@@ -343,8 +341,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     def is_fitted(self):
         return self.partition_ is not None
 
-    def infer_labels_costs_score(self, n_samples, xy, xy_sum, x_sum):
-        optimizer, v_optimizer = self.create_optimizers()
+    def infer(self, n_samples, xy, xy_sum, x_sum, optimizer):
         labels = np.empty(n_samples, dtype=np.int32)
         costs = np.empty((n_samples, self.n_clusters))
         score = optimizer.infer(n_samples, xy, xy_sum, x_sum,
@@ -353,15 +350,13 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
                                 self.partition_.t_log_sum,
                                 self.partition_.t_centroid,
                                 labels, costs)
+        return labels, costs, score
+
+    def infer_labels_costs_score(self, n_samples, xy, xy_sum, x_sum):
+        optimizer, v_optimizer = self.create_optimizers()
+        labels, costs, score = self.infer(n_samples, xy, xy_sum, x_sum, optimizer)
         if v_optimizer:
-            v_labels = np.empty(n_samples, dtype=np.int32)
-            v_costs = np.empty((n_samples, self.n_clusters))
-            v_score = v_optimizer.infer(n_samples, xy, xy_sum, x_sum,
-                                        self.partition_.t_size,
-                                        self.partition_.t_sum,
-                                        self.partition_.t_log_sum,
-                                        self.partition_.t_centroid,
-                                        v_labels, v_costs)
+            v_labels, v_costs, v_score = self.infer(n_samples, xy, xy_sum, x_sum, v_optimizer)
             assert np.isclose(score, v_score)
             assert np.allclose(costs, v_costs)
             assert np.allclose(labels, v_labels)
