@@ -24,21 +24,21 @@ class CSIBOptimizer:
         self.sparse = issparse(xy)
         self.xy_indices, self.xy_indptr, self.xy_data = self.get_data(self.xy)
 
-    def init_centroids(self, labels, t_size, t_sum, t_log_sum, t_centroid):
+    def init_centroids(self, labels, x_ignore, t_size, t_sum, t_log_sum, t_centroid):
         return self.c_sib_optimizer.init_centroids(self.n_samples, self.xy_indices, self.xy_indptr,
-                                                   self.xy_data, self.x_sum, labels, t_size, t_sum,
-                                                   t_log_sum, t_centroid)
+                                                   self.xy_data, self.x_sum, labels, x_ignore,
+                                                   t_size, t_sum, t_log_sum, t_centroid)
 
-    def optimize(self, x_permutation, t_size, t_sum, t_log_sum, t_centroid, labels, ity):
+    def optimize(self, x_permutation, t_size, t_sum, t_log_sum, t_centroid, labels, x_locked_in, ity):
         return self.c_sib_optimizer.optimize(self.n_samples, self.xy_indices,
                                              self.xy_indptr, self.xy_data, self.xy_sum,
                                              self.x_sum, x_permutation, t_size, t_sum,
-                                             t_log_sum, t_centroid, labels, ity)
+                                             t_log_sum, t_centroid, labels, x_locked_in, ity)
 
-    def infer(self, n_samples, xy, xy_sum, x_sum, t_size, t_sum, t_log_sum, t_centroid, labels, costs):
+    def infer(self, n_samples, xy, xy_sum, x_sum, t_size, t_sum, t_log_sum, t_centroid, labels, x_locked_in, costs):
         xy_indices, xy_indptr, xy_data = self.get_data(xy)
         return self.c_sib_optimizer.infer(n_samples, xy_indices, xy_indptr, xy_data, xy_sum, x_sum,
-                                          t_size, t_sum, t_log_sum, t_centroid, labels, costs)
+                                          t_size, t_sum, t_log_sum, t_centroid, labels, x_locked_in, costs)
 
     def get_data(self, xy):
         if self.sparse:

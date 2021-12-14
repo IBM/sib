@@ -38,7 +38,7 @@ template <typename T>
 void SIBOptimizer<T>::init_centroids(
         int32_t n_samples, const int32_t *xy_indices,
         const int32_t *xy_indptr, const T *xy_data,
-        const T* x_sum, int32_t *labels,
+        const T* x_sum, int32_t *labels, bool *x_ignore,
         int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid) {
 
     int32_t x_start = 0;
@@ -50,6 +50,9 @@ void SIBOptimizer<T>::init_centroids(
     bool sparse = xy_indices != NULL;
 
     for (int32_t x=0; x<n_samples ; x++) {
+        if (x_ignore[x]) {
+            continue;
+        }
         int32_t t = labels[x];
         t_size[t]++;
         t_sum[t] += x_sum[x];
@@ -94,7 +97,8 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
         int32_t* x_permutation,                             // order of iteration
         int32_t *t_size, T *t_sum,                          // current clusters
         double *t_log_sum, T *t_centroid,
-        int32_t *labels, double* costs, double* total_cost, // assigned labels and costs
+        int32_t *labels, bool *x_locked_in,
+        double* costs, double* total_cost, // assigned labels and costs
         double* ity, double* ht, double* change_rate) {     // stats on updates
 
     int32_t n_changes = 0;
@@ -113,6 +117,9 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
 
     for (int32_t i=0; i<n_samples ; i++) {
         int32_t x = clustering_mode ? x_permutation[i] : i;
+        if (x_locked_in[x]) {
+            continue;
+        }
         int32_t old_t = labels[x];
 
         if (clustering_mode && t_size[old_t] == 1) {

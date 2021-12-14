@@ -353,7 +353,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     def is_fitted(self):
         return self.partition_ is not None
 
-    def infer(self, n_samples, xy, xy_sum, x_sum, x_nz_indices, optimizer):
+    def infer(self, n_samples, xy, xy_sum, x_sum, x_nz_indices, default_labels, optimizer):
         locked_in = np.invert(x_nz_indices)
         labels = np.empty(n_samples, dtype=np.int32)
         costs = np.empty((n_samples, self.n_clusters))
@@ -363,17 +363,19 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
                                 self.partition_.t_log_sum,
                                 self.partition_.t_centroid,
                                 labels, locked_in, costs)
+        labels[locked_in] = default_labels
         return labels, costs, score
 
     def infer_labels_costs_score(self, n_samples, xy, xy_sum, x_sum, x_nz_indices, default_labels):
         optimizer, v_optimizer = self.create_optimizers()
-        labels, costs, score = self.infer(n_samples, xy, xy_sum, x_sum, x_nz_indices, optimizer)
+        labels, costs, score = self.infer(n_samples, xy, xy_sum, x_sum,
+                                          x_nz_indices, default_labels, optimizer)
         if v_optimizer:
-            v_labels, v_costs, v_score = self.infer(n_samples, xy, xy_sum, x_sum, x_nz_indices, v_optimizer)
+            v_labels, v_costs, v_score = self.infer(n_samples, xy, xy_sum, x_sum,
+                                                    x_nz_indices, default_labels, v_optimizer)
             assert np.isclose(score, v_score)
             assert np.allclose(costs, v_costs)
             assert np.allclose(labels, v_labels)
-        labels[np.invert(x_nz_indices)] = default_labels
         return labels, costs, score
 
     def fit_new_data(self, x):

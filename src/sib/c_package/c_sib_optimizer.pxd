@@ -20,7 +20,7 @@ cdef extern from "sib_optimizer.h":
         void init_centroids(
                 int32_t n_samples, const int32_t *xy_indices,
                 const int32_t *xy_indptr, const T *xy_data,
-                const T* x_sum, int32_t *labels,
+                const T* x_sum, int32_t *labels, bool* x_ignore,
                 int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid);
 
         void iterate(
@@ -30,5 +30,6 @@ cdef extern from "sib_optimizer.h":
                 T xy_sum, const T* x_sum,
                 int32_t* x_permutation,
                 int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid,
-                int32_t *labels, double* costs, double* total_cost,
+                int32_t *labels, bool *x_locked_in,
+                double* costs, double* total_cost,
                 double* ity, double* ht, double* change_rate);
