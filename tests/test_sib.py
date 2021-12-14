@@ -1,4 +1,5 @@
 import os
+import pickle
 import pytest
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
@@ -10,41 +11,34 @@ from sib import SIB
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
+n_cls = 4
+
 setups = {
-    'baseline':      {'n_cls': 20, 'n_jobs': 1, 'n_init': 1, 'max_iter': 8,
+    'baseline':      {'n_cls': n_cls, 'n_jobs': 1, 'n_init': 1, 'max_iter': 8,
                       'tol': 0.05, 'uniform': True, 'sparse': True, 'opt': 'B'},
-    'n_init':        {'n_cls': 20, 'n_jobs': 1, 'n_init': 8, 'max_iter': 8,
+    'n_init':        {'n_cls': n_cls, 'n_jobs': 1, 'n_init': 8, 'max_iter': 8,
                       'tol': 0.05, 'uniform': True, 'sparse': True, 'opt': 'C'},
-    'n_jobs':        {'n_cls': 20, 'n_jobs': -1, 'n_init': 8, 'max_iter': 8,
+    'n_jobs':        {'n_cls': n_cls, 'n_jobs': -1, 'n_init': 8, 'max_iter': 8,
                       'tol': 0.05, 'uniform': True, 'sparse': True, 'opt': 'C'},
-    'max_iter':      {'n_cls': 20, 'n_jobs': 1, 'n_init': 1, 'max_iter': 3,
+    'max_iter':      {'n_cls': n_cls, 'n_jobs': 1, 'n_init': 1, 'max_iter': 3,
                       'tol': 0.02, 'uniform': True, 'sparse': True, 'opt': 'C'},
-    'tol':           {'n_cls': 20, 'n_jobs': 1, 'n_init': 1, 'max_iter': 8,
+    'tol':           {'n_cls': n_cls, 'n_jobs': 1, 'n_init': 1, 'max_iter': 8,
                       'tol': 0.10, 'uniform': True, 'sparse': True, 'opt': 'B'},
-    'uniform_prior': {'n_cls': 20, 'n_jobs': 1, 'n_init': 1, 'max_iter': 8,
+    'uniform_prior': {'n_cls': n_cls, 'n_jobs': 1, 'n_init': 1, 'max_iter': 8,
                       'tol': 0.05, 'uniform': False, 'sparse': True, 'opt': 'C'},
-    'float':         {'n_cls': 20, 'n_jobs': 1, 'n_init': 1, 'max_iter': 8,
+    'float':         {'n_cls': n_cls, 'n_jobs': 1, 'n_init': 1, 'max_iter': 8,
                       'tol': 0.05, 'uniform': False, 'sparse': True, 'opt': 'C', 'type': 'float'},
-    'dense':          {'n_cls': 20, 'n_jobs': 1, 'n_init': 1, 'max_iter': 8,
+    'dense':          {'n_cls': n_cls, 'n_jobs': 1, 'n_init': 1, 'max_iter': 4,
                        'tol': 0.05, 'uniform': True, 'sparse': False, 'opt': 'B'},
 }
 
 equal_refs = [['baseline', 'dense'], ['n_init', 'n_jobs'], ['uniform_prior', 'float']]
 
-ami_values = {
-    'baseline': 0.479308645259772,
-    'n_init': 0.4839664852243509,           # higher than baseline because uses more inits sequentially
-    'n_jobs': 0.4839664852243509,           # should be identical to n_init
-    'max_iter': 0.4054343178732652,         # less than baseline because less iterations
-    'tol': 0.42316606323860384,             # less than baseline because higher tol
-    'uniform_prior': 0.4833358896883293,    # normally higher than baseline
-    'float': 0.4833358896883293,            # should be identical to uniform_prior
-    'dense': 0.479308645259772              # should be identical to baseline
-}
-
 vectors_path = os.path.join(base_dir, 'resources', 'vectors')
 
 gold_labels_path = os.path.join(base_dir, 'resources', 'gold_labels')
+
+ami_scores_path = os.path.join(base_dir, 'resources', 'ami_scores')
 
 random_state = 527802
 
@@ -127,8 +121,9 @@ def verify(setup_name, vectors):
 
 
 def vectorize_20ng():
-    dataset = fetch_20newsgroups(subset='train', categories=None,
-                                 shuffle=True, random_state=256)
+    categories = ['soc.religion.christian', 'comp.graphics',
+                  'rec.autos', 'sci.med']
+    dataset = fetch_20newsgroups(subset='train', categories=categories)
     vectorizer = CountVectorizer(max_features=max_features)
     return vectorizer.fit_transform(dataset.data), dataset.target
 
@@ -160,7 +155,7 @@ def generate_references():
         print("Saving gold labels to: %s" % gold_labels_path)
         np.savez_compressed(os.path.join(gold_labels_path, "gold_labels.npz"), labels=gold_labels)
     else:
-        print("Vectors dump is already generated")
+        print("Gold labels are already saved")
 
     # verification that setups that are expected to give equal result really do so
     for setup_list in equal_refs:
@@ -174,11 +169,23 @@ def generate_references():
                     assert np.allclose(first_score, current_score)
     print("Verified equal result for marked tests")
 
-    for setup, ref_ami in ami_values.items():
-        labels, _, _ = load(setup)
-        ami = metrics.adjusted_mutual_info_score(gold_labels, labels)
-        assert np.isclose(ami, ref_ami)
-    print("Verified ami scores")
+    if not os.path.exists(ami_scores_path):
+        os.makedirs(ami_scores_path)
+        ami_scores = {}
+        for setup in setups.keys():
+            labels, _, _ = load(setup)
+            ami_scores[setup] = metrics.adjusted_mutual_info_score(gold_labels, labels)
+        print("Saving ami scores to: %s" % ami_scores_path)
+        with open(os.path.join(ami_scores_path, "ami_scores.npz"), "wb") as f:
+            pickle.dump(ami_scores, f)
+    else:
+        with open(os.path.join(ami_scores_path, "ami_scores.npz"), "rb") as f:
+            ami_scores = pickle.load(f)
+        for setup, ref_ami in ami_scores.items():
+            labels, _, _ = load(setup)
+            ami = metrics.adjusted_mutual_info_score(gold_labels, labels)
+            assert np.isclose(ami, ref_ami)
+        print("Verified ami scores")
 
 
 @pytest.mark.parametrize("setup_name", list(setups.keys()))

@@ -21,7 +21,7 @@ class SIBOptimizer {
         void init_centroids(
                 int32_t n_samples, const int32_t *xy_indices,
                 const int32_t *xy_indptr, const T *xy_data,
-                const T* x_sum, int32_t *labels,
+                const T* x_sum, int32_t *labels, bool *x_ignore,
                 int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid);
 
         void iterate(bool clustering_mode,                          // clustering / classification mode
@@ -31,7 +31,8 @@ class SIBOptimizer {
                 int32_t* x_permutation,                             // order of iteration
                 int32_t *t_size, T *t_sum,                          // current clusters
                 double *t_log_sum, T *t_centroid,
-                int32_t *labels, double* costs, double* total_cost, // assigned labels and costs
+                int32_t *labels, bool *locked_in,
+                double* costs, double* total_cost, // assigned labels and costs
                 double* ity, double* ht, double* change_rate);      // stats on updates
 
     private:

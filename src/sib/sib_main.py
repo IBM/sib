@@ -13,8 +13,6 @@ from joblib import Parallel, delayed, effective_n_jobs
 from .sib_optimizer_p import PSIBOptimizer
 from .sib_optimizer_c import CSIBOptimizer
 
-from time import time
-
 
 class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     """sequential Information Bottleneck (sIB) clustering.
@@ -104,6 +102,9 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         self.y_sum = None
         self.xy_log_sum = None
 
+        self.x_nz_indices = None
+        self.y_nz_indices = None
+
         self.sparse = None
 
         self.ixy = None
@@ -158,11 +159,13 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             raise ValueError("X's values should be >= 0")
 
         # prepare the values matrix and sum arrays
-        self.xy, self.xy_sum, self.xy_log_sum, self.x_sum, self.y_sum, self.sparse = self.prepare_data(x)
+        self.xy, self.xy_sum, self.xy_log_sum, self.x_sum, self.y_sum, \
+            self.x_nz_indices, self.y_nz_indices, self.sparse = self.prepare_data(x)
 
         # calc the mutual info between x and y as well as the entropy of x and y
         self.ixy, self.hx, self.hy = self.calc_mi_entropy(self.xy, self.xy_sum, self.x_sum,
-                                                          self.y_sum, self.xy_log_sum)
+                                                          self.y_sum, self.xy_log_sum,
+                                                          self.x_nz_indices, self.y_nz_indices)
 
         random_state = check_random_state(self.random_state)
 
@@ -202,7 +205,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         self.n_iter_ = best_partition.n_iter
         self.cluster_centers_ = best_partition.t_centroid / best_partition.t_sum[:, None]
         self.labels_, self.costs_, _ = self.infer_labels_costs_score(
-            self.n_samples, self.xy, self.xy_sum, self.x_sum)
+            self.n_samples, self.xy, self.xy_sum, self.x_sum,
+            self.x_nz_indices, self.partition_.labels[np.invert(self.x_nz_indices)])
         return self
 
     def prepare_data(self, x):
@@ -225,7 +229,9 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             y_sum = y_sum.A.ravel()
         xy_sum = x_sum.sum()
         xy_log_sum = np.log2(xy_sum)
-        return xy, xy_sum, xy_log_sum, x_sum, y_sum, sparse
+        x_nz_indices = x_sum > 0
+        y_nz_indices = y_sum > 0
+        return xy, xy_sum, xy_log_sum, x_sum, y_sum, x_nz_indices, y_nz_indices, sparse
 
     def sib_single(self, random_state, job_id=None, run_id=None):
         # initialization: random generator, partition and optimizers
@@ -233,7 +239,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         optimizer, v_optimizer = self.create_optimizers()
         partition = Partition(self.n_samples, self.n_features, self.n_clusters,
                               self.xy, self.x_sum, self.xy_sum, self.xy_log_sum,
-                              self.hy, random_state, optimizer, v_optimizer)
+                              self.hy, self.x_nz_indices, random_state,
+                              optimizer, v_optimizer)
 
         # main loop of optimizing the partition
         self.report_status(partition, job_id, run_id)
@@ -298,13 +305,14 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
         partition.change_ratio, partition.ity, partition.ht = optimizer.optimize(
             x_permutation, partition.t_size, partition.t_sum, partition.t_log_sum,
-            partition.t_centroid, partition.labels, partition.ity)
+            partition.t_centroid, partition.labels, partition.locked_in, partition.ity)
 
         if v_optimizer:
             v_partition.change_ratio, v_partition.ity, v_partition.ht = v_optimizer.optimize(
                 x_permutation, v_partition.t_size, v_partition.t_sum, v_partition.t_log_sum,
-                v_partition.t_centroid, v_partition.labels, v_partition.ity)
+                v_partition.t_centroid, v_partition.labels, partition.locked_in, v_partition.ity)
             assert np.allclose(partition.labels, v_partition.labels)
+            assert np.allclose(partition.locked_in, v_partition.locked_in)
             assert np.allclose(partition.change_ratio, v_partition.change_ratio)
             assert np.allclose(partition.t_sum, v_partition.t_sum)
             assert np.allclose(partition.t_log_sum, v_partition.t_log_sum)
@@ -330,9 +338,11 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             return False
 
     @staticmethod
-    def calc_mi_entropy(xy, xy_sum, x_sum, y_sum, xy_log_sum):
-        hx = -np.dot(x_sum, np.log2(x_sum) - xy_log_sum) / xy_sum
-        hy = -np.dot(y_sum, np.log2(y_sum) - xy_log_sum) / xy_sum
+    def calc_mi_entropy(xy, xy_sum, x_sum, y_sum, xy_log_sum, x_nz_indices, y_nz_indices):
+        x_sum_nz = x_sum[x_nz_indices]
+        y_sum_nz = y_sum[y_nz_indices]
+        hx = -np.dot(x_sum_nz, np.log2(x_sum_nz) - xy_log_sum) / xy_sum
+        hy = -np.dot(y_sum_nz, np.log2(y_sum_nz) - xy_log_sum) / xy_sum
         xy = xy.data if issparse(xy) else xy[np.nonzero(xy)]
         hxy = -np.dot(xy, np.log2(xy) - xy_log_sum) / xy_sum
         return hx + hy - hxy, hx, hy
@@ -343,8 +353,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     def is_fitted(self):
         return self.partition_ is not None
 
-    def infer_labels_costs_score(self, n_samples, xy, xy_sum, x_sum):
-        optimizer, v_optimizer = self.create_optimizers()
+    def infer(self, n_samples, xy, xy_sum, x_sum, x_nz_indices, default_labels, optimizer):
+        locked_in = np.invert(x_nz_indices)
         labels = np.empty(n_samples, dtype=np.int32)
         costs = np.empty((n_samples, self.n_clusters))
         score = optimizer.infer(n_samples, xy, xy_sum, x_sum,
@@ -352,16 +362,17 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
                                 self.partition_.t_sum,
                                 self.partition_.t_log_sum,
                                 self.partition_.t_centroid,
-                                labels, costs)
+                                labels, locked_in, costs)
+        labels[locked_in] = default_labels
+        return labels, costs, score
+
+    def infer_labels_costs_score(self, n_samples, xy, xy_sum, x_sum, x_nz_indices, default_labels):
+        optimizer, v_optimizer = self.create_optimizers()
+        labels, costs, score = self.infer(n_samples, xy, xy_sum, x_sum,
+                                          x_nz_indices, default_labels, optimizer)
         if v_optimizer:
-            v_labels = np.empty(n_samples, dtype=np.int32)
-            v_costs = np.empty((n_samples, self.n_clusters))
-            v_score = v_optimizer.infer(n_samples, xy, xy_sum, x_sum,
-                                        self.partition_.t_size,
-                                        self.partition_.t_sum,
-                                        self.partition_.t_log_sum,
-                                        self.partition_.t_centroid,
-                                        v_labels, v_costs)
+            v_labels, v_costs, v_score = self.infer(n_samples, xy, xy_sum, x_sum,
+                                                    x_nz_indices, default_labels, v_optimizer)
             assert np.isclose(score, v_score)
             assert np.allclose(costs, v_costs)
             assert np.allclose(labels, v_labels)
@@ -377,9 +388,12 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             raise ValueError("n_samples=%d should be > 1" % self.n_samples)
 
         # prepare the values matrix and sum arrays
-        xy, xy_sum, _, x_sum, _, _ = self.prepare_data(x)
+        xy, xy_sum, _, x_sum, _, x_nz_indices, _, _ = self.prepare_data(x)
 
-        return self.infer_labels_costs_score(n_samples, xy, xy_sum, x_sum)
+        random_state = check_random_state(self.random_state)
+        default_labels = random_state.randint(self.n_clusters, size=x_nz_indices.size - x_nz_indices.sum())
+
+        return self.infer_labels_costs_score(n_samples, xy, xy_sum, x_sum, x_nz_indices, default_labels)
 
     def fit_transform(self, x, y=None, sample_weight=None):
         """Compute clustering and transform x to cluster-distance space.
@@ -486,24 +500,21 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
 class Partition:
     def __init__(self, n_samples, n_features, n_clusters, xy, x_sum, xy_sum,
-                 xy_log_sum, hy, random_state, optimizer, v_optimizer):
+                 xy_log_sum, hy, x_nz_indices, random_state, optimizer, v_optimizer):
         # Produce a random partition as an initialization point
         self.labels = random_state.permutation(np.linspace(0, n_clusters, n_samples,
                                                            endpoint=False).astype(np.int32))
 
-        # initialize the data structures based on the labels and the joint distribution
-        self.t_size = np.zeros(n_clusters, dtype=np.int32)
-        self.t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
-        self.t_log_sum = np.empty(n_clusters, dtype=np.float64)
-        self.t_centroid = np.zeros((n_clusters, n_features), dtype=xy.dtype)
+        # zero vectors are locked in the random cluster associated to them
+        self.locked_in = np.invert(x_nz_indices)
 
-        optimizer.init_centroids(self.labels, self.t_size, self.t_sum, self.t_log_sum, self.t_centroid)
+        # initialize the data structures based on the labels and the joint distribution
+        self.t_size, self.t_sum, self.t_log_sum, self.t_centroid = \
+            self.init_centroids(n_features, n_clusters, xy, x_sum, optimizer)
+
         if v_optimizer is not None:
-            v_t_size = np.zeros(n_clusters, dtype=np.int32)
-            v_t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
-            v_t_log_sum = np.empty(n_clusters, dtype=np.float64)
-            v_t_centroid = np.zeros((n_clusters, n_features), dtype=xy.dtype)
-            v_optimizer.init_centroids(self.labels, v_t_size, v_t_sum, v_t_log_sum, v_t_centroid)
+            v_t_size, v_t_sum, v_t_log_sum, v_t_centroid = \
+                self.init_centroids(n_features, n_clusters, xy, x_sum, v_optimizer)
             assert np.allclose(self.t_size, v_t_size)
             assert np.allclose(self.t_sum, v_t_sum)
             assert np.allclose(self.t_log_sum, v_t_log_sum)
@@ -527,3 +538,11 @@ class Partition:
     def __str__(self):
         return " size: %d\n counter: %d\n convergence_str: %s" % (
             self.n_clusters, self.n_iter, self.convergence_str)
+
+    def init_centroids(self, n_features, n_clusters, xy, x_sum, optimizer):
+        t_size = np.zeros(n_clusters, dtype=np.int32)
+        t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
+        t_log_sum = np.empty(n_clusters, dtype=np.float64)
+        t_centroid = np.zeros((n_clusters, n_features), dtype=xy.dtype)
+        optimizer.init_centroids(self.labels, self.locked_in, t_size, t_sum, t_log_sum, t_centroid)
+        return t_size, t_sum, t_log_sum, t_centroid
