@@ -45,7 +45,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         Determines random number generation for centroid initialization. Use
         an int to make the randomness deterministic.
 
-    n_jobs : int, default=None
+    n_jobs : int, default=-1
         The number of jobs to use for the computation. This works by computing
         each of the n_init runs in parallel.
 
@@ -80,7 +80,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
     """
 
-    def __init__(self, n_clusters, random_state=None, n_jobs=1,
+    def __init__(self, n_clusters, random_state=None, n_jobs=-1,
                  n_init=10, max_iter=15, tol=0.02, verbose=False,
                  inv_beta=0, uniform_prior=True, optimizer_type='C',
                  fast_log=False):
