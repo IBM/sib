@@ -10,7 +10,7 @@ from sklearn.cluster import KMeans
 from sklearn import metrics
 
 from sib import SIB
-import clustering_utils
+import example_utils
 
 
 # we will treat the 20 news groups dataset as a benchmark. it contains
@@ -28,7 +28,7 @@ if not os.path.exists(output_path):
     os.makedirs(output_path)
 
 # step 1 - read the dataset
-texts, gold_labels_array, n_clusters, topics, n_samples = clustering_utils.fetch_20ng('all')
+texts, gold_labels_array, n_clusters, topics, n_samples = example_utils.fetch_20ng('all')
 print("Clustering dataset contains %d texts from %d topics" % (n_samples, n_clusters))
 print()
 
@@ -78,9 +78,9 @@ for algorithm_name in ['kmeans', 'sib']:
     predictions_array = algorithm.labels_
 
     # save a heatmap
-    clustering_utils.create_heatmap(gold_labels_array, predictions_array,
-                                    topics, algorithm_name + ' clustering heatmap',
-                                    os.path.join(output_path, algorithm_name + '_heatmap'))
+    example_utils.create_heatmap(gold_labels_array, predictions_array,
+                                 topics, algorithm_name + ' clustering heatmap',
+                                 os.path.join(output_path, algorithm_name + '_heatmap'))
 
     # measure the clustering quality and save a report
     ami = metrics.adjusted_mutual_info_score(gold_labels_array, predictions_array)

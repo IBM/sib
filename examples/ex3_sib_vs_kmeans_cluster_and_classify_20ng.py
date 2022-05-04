@@ -10,8 +10,8 @@ from sklearn.cluster import KMeans
 from sklearn import metrics
 from sklearn.metrics import classification_report, accuracy_score
 
-from sib import SIB
-import clustering_utils
+from sib import SIB, clustering_utils
+import example_utils
 
 # we will treat the 20 news groups dataset as a benchmark. it contains
 # messages about 20 topics that we want to cluster to 20 clusters.
@@ -23,12 +23,12 @@ if not os.path.exists(output_path):
 
 # step 1 - read the dataset
 clustering_texts, clustering_gold_labels_array, \
-    clustering_n_clusters, _, clustering_n_samples = clustering_utils.fetch_20ng('train')
+    clustering_n_clusters, _, clustering_n_samples = example_utils.fetch_20ng('train')
 print("Clustering dataset contains %d texts from %d topics" % (clustering_n_samples, clustering_n_clusters))
 
 classification_texts, classification_gold_labels_array, \
     classification_n_clusters, classification_topics, \
-    classification_n_samples = clustering_utils.fetch_20ng('test')
+    classification_n_samples = example_utils.fetch_20ng('test')
 print("Classification dataset contains %d texts from %d topics" % (classification_n_samples, classification_n_clusters))
 
 print()
@@ -98,9 +98,9 @@ for algorithm_name in ['kmeans', 'sib']:
     print("Classification time: %.3f secs." % (classification_end_t - classification_start_t))
 
     # save a heatmap
-    clustering_utils.create_heatmap(classification_gold_labels_array, classification_predictions_array,
-                                    classification_topics, algorithm_name + ' classification heatmap',
-                                    os.path.join(output_path, algorithm_name + '_heatmap'))
+    example_utils.create_heatmap(classification_gold_labels_array, classification_predictions_array,
+                                 classification_topics, algorithm_name + ' classification heatmap',
+                                 os.path.join(output_path, algorithm_name + '_heatmap'))
 
     # the clustering algorithm uses its own enumeration of clusters; hence the
     # cluster ids that it returns are not aligned with the class ids in the 

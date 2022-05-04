@@ -9,8 +9,8 @@ from time import time
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import metrics
 
-from sib import SIB
-import clustering_utils
+from sib import SIB, clustering_utils
+import example_utils
 
 
 # This test is meant for evaluating the clustering quality and
@@ -24,7 +24,7 @@ if not os.path.exists(output_path):
     os.makedirs(output_path)
 
 # step 1 - read the dataset
-texts, gold_labels, n_clusters, topics, n_samples = clustering_utils.fetch_20ng('all')
+texts, gold_labels, n_clusters, topics, n_samples = example_utils.fetch_20ng('all')
 print("Dataset contains %d texts from %d topics" % (n_samples, n_clusters))
 
 # step 2 - represent the clustering data using bow of the 5K most frequent
@@ -36,7 +36,7 @@ if os.path.exists(vectors_path):
 else:
     print("Vectorizing texts...")
     vectorizing_start_t = time()
-    vectorizer = CountVectorizer(tokenizer=clustering_utils.custom_tokenizer,
+    vectorizer = CountVectorizer(tokenizer=example_utils.custom_tokenizer,
                                  max_df=0.5, min_df=10, max_features=5000)
     vectors = vectorizer.fit_transform(texts)
     terms = vectorizer.get_feature_names()
@@ -88,11 +88,14 @@ print('-------')
 # the p-value test, we report the top k (15 by default) in ascending order.
 print("Performing p-value analysis")
 p_value_analysis_start_t = time()
-cluster_key_terms = clustering_utils.get_key_terms(vectors, sib.labels_,
+clusters = clustering_utils.get_clusters(sib.labels_)
+cluster_key_terms = clustering_utils.get_key_terms(vectors, clusters,
                                                    p_value_threshold=0.01, top_k=15)
+cluster_key_texts = clustering_utils.get_ket_texts(vectors, clusters, cluster_key_terms, 2)
 p_value_analysis_end_t = time()
 print("P-value analysis time: %.3f secs." % (p_value_analysis_end_t - p_value_analysis_start_t))
 
+print(cluster_key_texts)
 
 # step 6 - align the generated clusters to the original classes
 # this is done only for having a more informative report
@@ -118,9 +121,9 @@ print(report)
 
 # generate a heatmap and save it as svg
 heatmap_path = os.path.join(output_path, 'sib_heatmap')
-clustering_utils.create_heatmap(gold_labels, sib.labels_,
-                                topics, 'sIB clustering heatmap',
-                                heatmap_path, use_svg=True)
+example_utils.create_heatmap(gold_labels, sib.labels_,
+                             topics, 'sIB clustering heatmap',
+                             heatmap_path, use_svg=True)
 heatmap_path += '.svg'
 
 # save a report
