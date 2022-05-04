@@ -91,11 +91,8 @@ p_value_analysis_start_t = time()
 clusters = clustering_utils.get_clusters(sib.labels_)
 cluster_key_terms = clustering_utils.get_key_terms(vectors, clusters,
                                                    p_value_threshold=0.01, top_k=15)
-cluster_key_texts = clustering_utils.get_ket_texts(vectors, clusters, cluster_key_terms, 2)
 p_value_analysis_end_t = time()
 print("P-value analysis time: %.3f secs." % (p_value_analysis_end_t - p_value_analysis_start_t))
-
-print(cluster_key_texts)
 
 # step 6 - align the generated clusters to the original classes
 # this is done only for having a more informative report

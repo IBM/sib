@@ -68,10 +68,7 @@ def get_binary_vectors(vectors):
     return binary_vectors
 
 
-def get_key_terms(vectors, labels, p_value_threshold, top_k):
-    # map from cluster id to cluster elements
-    clusters = get_clusters(labels)
-
+def get_key_terms(vectors, clusters, p_value_threshold, top_k):
     # perform document-level analysis. count every token only once per document.
     binary_vectors = get_binary_vectors(vectors)
     p_values = calc_p_value_doc_level(binary_vectors, clusters)
@@ -91,7 +88,7 @@ def get_key_terms(vectors, labels, p_value_threshold, top_k):
     return result
 
 
-def get_ket_texts(vectors, clusters, key_terms, top_k):
+def get_key_texts(vectors, clusters, key_terms, top_k):
     binary_vectors = get_binary_vectors(vectors)
     result = {}
     for cluster_id, cluster_key_terms in key_terms.items():
