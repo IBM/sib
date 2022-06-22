@@ -20,6 +20,8 @@ import example_utils
 # quality and it runs with 10 random initializations. however,
 # if we are interested in evaluating speed, we will use a single
 # initialization.
+import heatmap
+
 speed_test_mode = False
 
 # step 0 - create an output directory if it does not exist
@@ -78,9 +80,9 @@ for algorithm_name in ['kmeans', 'sib']:
     predictions_array = algorithm.labels_
 
     # save a heatmap
-    example_utils.create_heatmap(gold_labels_array, predictions_array,
-                                 topics, algorithm_name + ' clustering heatmap',
-                                 os.path.join(output_path, algorithm_name + '_heatmap'))
+    heatmap.create_heatmap(gold_labels_array, predictions_array,
+                           topics, algorithm_name + ' clustering heatmap',
+                           os.path.join(output_path, algorithm_name + '_heatmap'))
 
     # measure the clustering quality and save a report
     ami = metrics.adjusted_mutual_info_score(gold_labels_array, predictions_array)

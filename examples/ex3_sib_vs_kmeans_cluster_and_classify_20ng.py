@@ -17,6 +17,8 @@ import example_utils
 # messages about 20 topics that we want to cluster to 20 clusters.
 
 # step 0 - create an output directory if it does not exist
+import heatmap
+
 output_path = os.path.join("output", "ex3")
 if not os.path.exists(output_path):
     os.makedirs(output_path)
@@ -98,9 +100,9 @@ for algorithm_name in ['kmeans', 'sib']:
     print("Classification time: %.3f secs." % (classification_end_t - classification_start_t))
 
     # save a heatmap
-    example_utils.create_heatmap(classification_gold_labels_array, classification_predictions_array,
-                                 classification_topics, algorithm_name + ' classification heatmap',
-                                 os.path.join(output_path, algorithm_name + '_heatmap'))
+    heatmap.create_heatmap(classification_gold_labels_array, classification_predictions_array,
+                           classification_topics, algorithm_name + ' classification heatmap',
+                           os.path.join(output_path, algorithm_name + '_heatmap'))
 
     # the clustering algorithm uses its own enumeration of clusters; hence the
     # cluster ids that it returns are not aligned with the class ids in the 

@@ -10,12 +10,16 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import metrics
 
 from sib import SIB, clustering_utils
+
+import custom_tokenizer
 import example_utils
 
 
 # This test is meant for evaluating the clustering quality and
 # it runs with 4 random initializations. For evaluating speed,
 # we use a single initialization.
+import heatmap
+
 speed_test_mode = False
 
 # step 0 - create an output directory if it does not exist yet
@@ -36,7 +40,7 @@ if os.path.exists(vectors_path):
 else:
     print("Vectorizing texts...")
     vectorizing_start_t = time()
-    vectorizer = CountVectorizer(tokenizer=example_utils.custom_tokenizer,
+    vectorizer = CountVectorizer(tokenizer=custom_tokenizer.custom_tokenizer,
                                  max_df=0.5, min_df=10, max_features=5000)
     vectors = vectorizer.fit_transform(texts)
     terms = vectorizer.get_feature_names()
@@ -118,9 +122,9 @@ print(report)
 
 # generate a heatmap and save it as svg
 heatmap_path = os.path.join(output_path, 'sib_heatmap')
-example_utils.create_heatmap(gold_labels, sib.labels_,
-                             topics, 'sIB clustering heatmap',
-                             heatmap_path, use_svg=True)
+heatmap.create_heatmap(gold_labels, sib.labels_,
+                       topics, 'sIB clustering heatmap',
+                       heatmap_path, use_svg=True)
 heatmap_path += '.svg'
 
 # save a report
