@@ -148,8 +148,11 @@ def create_plots():
                 'macro_f1': ('Macro Average F1', ''),
                 'total_time': ('Total Run Time', '')}
 
+    groups = [[['ami', 'ari']],
+              [['micro_f1', 'macro_f1']]]
+    group_figsize = [(17, 8), (17, 8)]
+    group_padding = [(None, 0.03), (None, 0.03)]
     time_measures = {'total_time'}
-    legend_measures = {'ari', 'macro-f1', 'total_time'}
 
     # Okabe and Ito 2008 palette
     colors = ['#000000', '#E69F00', '#56B4E9', '#009E73',
@@ -158,7 +161,7 @@ def create_plots():
     # keep the black for the error bars
     colors = colors[1:]
 
-    figsize = (12, 10)
+    # figsize = (12, 10)
     bar_width = 0.22
     margin = 0.01
 
@@ -174,53 +177,59 @@ def create_plots():
 
     labels = [f'{algorithm} on top of {embedding}' for (algorithm, embedding, c, d), _ in setup_groups]
 
-    for measure, (title, caption) in measures.items():
+    for group, figsize, padding in zip(groups, group_figsize, group_padding):
+        rows = len(group)
+        cols = len(group[0])
+        hspace, wspace = padding
+        fig, axes = plt.subplots(rows, cols, figsize=figsize,
+                                 constrained_layout=True)
+        fig.set_constrained_layout_pads(hspace=hspace, wspace=wspace)
+        axes = axes.flatten()
+        group = [y for x in group for y in x]
+        for index, (measure, ax) in enumerate(zip(group, axes)):
+            title, caption = measures[measure]
 
-        fig, ax = plt.subplots(1, 1, figsize=figsize,
-                               constrained_layout=True)
-        fig.set_constrained_layout_pads(hspace=0.08)
+            log_scale = measure in time_measures
+            upper_bound = None if log_scale else 1
 
-        log_scale = measure in time_measures
-        upper_bound = None if log_scale else 1
-
-        ax.margins(x=margin)
-
-        if log_scale:
-            ax.set_yscale('log', base=2)
-            ax.set_yticks([])
-
-        for setup_id, (_, df_setup) in enumerate(setup_groups):
-            df_setup = df_setup.sort_values(by=['stop_words']).reset_index(drop=True)
-            mean_values = df_setup[measure]
-            ci_values = df_setup[[measure + '_low', measure + '_high']].T
-            error_bar = (ci_values - mean_values).abs()
-            rects = ax.bar(ind_values + setup_id*bar_width,
-                           mean_values, yerr=error_bar.to_numpy(),
-                           width=bar_width, capsize=3, ecolor='black',
-                           color=colors[setup_id % len(colors)])
+            ax.margins(x=margin)
 
             if log_scale:
-                autolabel(ax, rects)
+                ax.set_yscale('log', base=2)
+                ax.set_yticks([])
 
-        # ax.set_title(title, fontsize=14)
-        if upper_bound:
-            ax.set_ylim(0.0, upper_bound)
-            ax.set_yticks(np.arange(0, upper_bound + 0.1, 0.1))
-        ax.set_xticks(ind_labels)
-        ax.set_xticklabels(datasets, fontsize=14)
+            for setup_id, (_, df_setup) in enumerate(setup_groups):
+                df_setup = df_setup.sort_values(by=['stop_words']).reset_index(drop=True)
+                mean_values = df_setup[measure]
+                ci_values = df_setup[[measure + '_low', measure + '_high']].T
+                error_bar = (ci_values - mean_values).abs()
+                rects = ax.bar(ind_values + setup_id*bar_width,
+                               mean_values, yerr=error_bar.to_numpy(),
+                               width=bar_width, capsize=3, ecolor='black',
+                               color=colors[setup_id % len(colors)])
 
-        ax.set_axisbelow(True)
-        ax.grid(alpha=0.75, axis='y')
+                if log_scale:
+                    autolabel(ax, rects)
 
-        if measure in legend_measures:
-            fig.legend(labels=labels, loc='center', ncol=3,
-                       bbox_to_anchor=(0.5, -0.08), prop={'size': 14},
-                       bbox_transform=ax.transAxes)
-            # fig.legend(labels=labels, loc='center', ncol=3,
-            #            bbox_to_anchor=(0.5, -0.2), prop={'size': 14},
-            #            bbox_transform=ax.transAxes)
+            ax.set_title(title, fontsize=14)
+            if upper_bound:
+                ax.set_ylim(0.0, upper_bound)
+                ax.set_yticks(np.arange(0, upper_bound + 0.1, 0.1))
+            ax.set_xticks(ind_labels)
+            ax.set_xticklabels(datasets, fontsize=14)
 
-        fig.savefig(os.path.join(FIGURES_FULL_PATH, f'fig_{measure}.pdf'), bbox_inches='tight', dpi=300)
+            ax.set_axisbelow(True)
+            ax.grid(alpha=0.75, axis='y')
+
+        fig.legend(labels=labels, loc='center', ncol=5,
+                   bbox_to_anchor=(-0.05, -0.08), prop={'size': 14},
+                   bbox_transform=axes[-1].transAxes)
+        # fig.legend(labels=labels, loc='center', ncol=3,
+        #            bbox_to_anchor=(0.5, -0.2), prop={'size': 14},
+        #            bbox_transform=ax.transAxes)
+
+        fig.savefig(os.path.join(FIGURES_FULL_PATH, f'fig_{"_".join(group)}.pdf'),
+                    bbox_inches='tight', dpi=300)
 
 
 def sort_df(df):
@@ -234,13 +243,13 @@ def sort_df(df):
 
 
 def format_seconds(seconds):
+    seconds = int(round(seconds))
     m, s = divmod(seconds, 60)
-    return f'{round(m):02d}:{round(s):02d}'
-
-
-def format_sec_part(seconds):
-    m, s = divmod(seconds, 60)
-    return f'{round(m):02d}:{s:06.3f}'
+    if m > 60:
+        h, m = divmod(m, 60)
+        return f'{h:02d}:{m:02d}:{round(s):02d}'
+    else:
+        return f'{m:02d}:{round(s):02d}'
 
 
 def autolabel(ax, rects):
@@ -256,24 +265,42 @@ def autolabel(ax, rects):
 
 
 def create_results_table():
+    # sets = [{'name': 'table_results.tex',
+    #          'caption': 'Assessment of clustering quality using the '
+    #                     'AMI, ARI, V-Measure (\\textit{VM}), Micro-F1 (\\textit{Mic-F1}) '
+    #                     'and Macro-F1 (\\textit{Mac-F1}) metrics',
+    #          'label': 'tab:results',
+    #          'metrics': {'ami': 'AMI', 'ari': 'ARI', 'v-measure': 'VM',
+    #                      'micro_f1': 'Mic-F1', 'macro_f1': 'Mac-F1'},
+    #          'columns': {'dataset': 'Dataset', 'algorithm': 'Algorithm',
+    #                      'vectorizer_name': 'Embed.'},
+    #          'min_max_func': pd.Series.max,
+    #          'wide': False},
+    #         {'name': 'table_times.tex',
+    #          'caption': 'Assessment of clustering speed based on measurements of the '
+    #                     'vectorization time (\\textit{Vector.}) and clustering time (\\textit{Cluster.}), '
+    #                     'and their sum (\\textit{Total})',
+    #          'label': 'tab:times',
+    #          'metrics': {'vectorizer_time': 'Vector.', 'algorithm_time': 'Cluster.', 'total_time': 'Total'},
+    #          'columns': {'dataset': 'Dataset', 'algorithm': 'Algorithm', 'vectorizer_name': 'Embed.'},
+    #          'min_max_func': pd.Series.min,
+    #          'wide': False},
     sets = [{'name': 'table_results.tex',
-             'caption': 'Assessment of clustering quality using the '
+             'caption': 'Assessment of clustering quality using the metrics: '
                         'AMI, ARI, V-Measure (\\textit{VM}), Micro-F1 (\\textit{Mic-F1}) '
-                        'and Macro-F1 (\\textit{Mac-F1}) metrics',
+                        'and Macro-F1 (\\textit{Mac-F1}), and of clustering speed based '
+                        'on measurements of the vectorization time (\\textit{Vector.}), '
+                        'clustering time (\\textit{Cluster.}), and their sum (\\textit{Total})',
              'label': 'tab:results',
              'metrics': {'ami': 'AMI', 'ari': 'ARI', 'v-measure': 'VM',
-                         'micro_f1': 'Mic-F1', 'macro_f1': 'Mac-F1'},
+                         'micro_f1': 'Mic-F1', 'macro_f1': 'Mac-F1',
+                         'vectorizer_time': 'Vector.', 'algorithm_time': 'Cluster.',
+                         'total_time': 'Total'},
              'columns': {'dataset': 'Dataset', 'algorithm': 'Algorithm',
                          'vectorizer_name': 'Embed.'},
-             'min_max_func': pd.Series.max},
-            {'name': 'table_times.tex',
-             'caption': 'Assessment of clustering speed based on measurements of the '
-                        'vectorization time (\\textit{Vector.}) and clustering time (\\textit{Cluster.}), '
-                        'and their sum (\\textit{Total})',
-             'label': 'tab:times',
-             'metrics': {'vectorizer_time': 'Vector.', 'algorithm_time': 'Cluster.', 'total_time': 'Total'},
-             'columns': {'dataset': 'Dataset', 'algorithm': 'Algorithm', 'vectorizer_name': 'Embed.'},
-             'min_max_func': pd.Series.min}]
+             'min_max_func': pd.Series.max,
+             'wide': True}
+            ]
 
     time_metrics = {'vectorizer_time', 'algorithm_time', 'total_time'}
 
@@ -285,24 +312,25 @@ def create_results_table():
         columns = table['columns']
         caption = table['caption']
         label = table['label']
-        func = table['min_max_func']
+        wide = table['wide']
 
         columns.update(metrics)
 
-        opening, fields_spec, ending, columns_names = prepare_table(columns, metrics, caption, label)
+        opening, fields_spec, ending, columns_names = prepare_table(columns, metrics, caption, label, wide)
 
         body = ''
         for dataset, df_group in df.groupby('dataset'):
             body += f"\\multirow[t]{{{len(df_group)}}}{{*}}{dataset}\n"
             bolds = {}
             for metric in metrics.keys():
-                values = df_group[metric].round(3 if metric in time_metrics else 2)
+                values = df_group[metric].round(0 if metric in time_metrics else 2)
+                func = pd.Series.min if metric in time_metrics else pd.Series.max
                 bolds[metric] = pd.Series(np.isclose(values, func(values)), values.index)
             for i, row in df_group.iterrows():
                 body += f" & {row['algorithm']} & {row['vectorizer_name']} & "
                 metrics_latex = []
                 for metric in metrics:
-                    metric_latex = f'{format_sec_part(row[metric])}' if metric in time_metrics else f'{row[metric]:.2f}'
+                    metric_latex = f'{format_seconds(row[metric])}' if metric in time_metrics else f'{row[metric]:.2f}'
                     if bolds[metric][i]:
                         metric_latex = f"\\textbf{{" + metric_latex + f"}}"
                     metrics_latex.append(metric_latex)
@@ -317,8 +345,9 @@ def create_results_table():
 def create_datasets_table():
 
     fields = {
-        'n_samples_org': '\\# Texts',
-        'n_samples': '\\# Used',
+        # 'n_samples_org': '\\# Texts',
+        # 'n_samples': '\\# Used',
+        'n_samples': '\\# Texts',
         'word_count_mean': '\\# Words',
         'n_clusters': '\\# Classes',
     }
@@ -330,14 +359,14 @@ def create_datasets_table():
     df = pd.read_csv(DATASETS_METADATA_FULL_PATH)
     df = df.sort_values(by='n_samples_org')
 
+    # 'The column \\textit{\\# Used} indicates the number of texts used in this evaluation. ' \
     caption = 'Benchmark datasets for evaluation. ' \
               'The column \\textit{\\# Texts} indicates the number of texts in the dataset. ' \
-              'The column \\textit{\\# Used} indicates the number of texts used in this evaluation. ' \
               'The column \\textit{\\# Words} shows the average text length in terms of word-count in the dataset, ' \
               'and \\textit{\\# Classes} shows the number of classes in the dataset.'
     label = 'tab:datasets'
 
-    opening, fields_spec, ending, columns_names = prepare_table(columns, fields, caption, label)
+    opening, fields_spec, ending, columns_names = prepare_table(columns, fields, caption, label, False)
 
     body = ''
     for i, row in df.iterrows():
@@ -352,11 +381,13 @@ def create_datasets_table():
         f.write(latex)
 
 
-def prepare_table(columns, fields, caption, label):
-    opening = f"\\begin{{table}}[]\n\\caption{{{caption}}}\n\\centering\n\\begin{{tabular}}"
-    ending = f"\\end{{tabular}}\n\\label{{{label}}}\n\\end{{table}}"
+def prepare_table(columns, fields, caption, label, wide):
+    wide_opening = f'\\begin{{adjustwidth}}{{-\\extralength}}{{0cm}}\n' if wide else ''
+    wide_ending = f'\\end{{adjustwidth}}\n' if wide else ''
+    opening = f"\\begin{{table}}[]\n\\caption{{{caption}}}\n\\centering\n{wide_opening}\\begin{{tabular}}"
+    ending = f"\\end{{tabular}}\n{wide_ending}\\label{{{label}}}\n\\end{{table}}"
     fields_spec = f"{{|" + " | ".join(["l"] * (len(columns) - len(fields)) + ["c"] * len(fields)) + f"|}}\n"
-    columns_names = "\\hline\n" + " & ".join(columns.values()) + "\\\\\\hline\n"
+    columns_names = "\\hline\n" + " & ".join(map(lambda x: '\\textbf{' + x + '}', columns.values())) + "\\\\\\hline\n"
     return opening, fields_spec, ending, columns_names
 
 
