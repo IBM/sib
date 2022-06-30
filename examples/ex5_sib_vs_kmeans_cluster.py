@@ -15,7 +15,7 @@ DATASETS_FULL_PATH, VECTORS_FULL_PATH, SUMMARY_FULL_PATH, \
     DATASETS_METADATA_FULL_PATH, SETUPS_METADATA_FULL_PATH, \
     EMBEDDINGS_META_FULL_PATH, PREDICTIONS_FULL_PATH, \
     METRICS_FULL_PATH, AGGREGATED_FULL_PATH, \
-    TABLES_FULL_PATH, FIGURES_FULL_PATH = get_paths(EX_NAME)
+    TABLES_FULL_PATH, FIGURES_FULL_PATH, HARDWARE_PATH = get_paths(EX_NAME)
 
 
 # cluster all datasets with all setups
@@ -96,6 +96,7 @@ def cluster():
 
 def main():
     cluster()
+
 
 
 if __name__ == '__main__':

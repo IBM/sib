@@ -1,4 +1,5 @@
 import gzip
+import json
 import os
 import pickle
 from time import time
@@ -8,6 +9,7 @@ import pandas as pd
 from constatns import get_paths
 from ex5_sib_vs_kmeans_setup import SETUPS, DATASETS, ALGORITHMS, EMBEDDINGS, DATASET_MAX_SIZE, EX_NAME
 from ex5_sib_vs_kmeans_utils import populate_kwargs, str_kwargs
+from example_utils import get_system_desc
 from vectorizers import GloveVectorizer
 
 
@@ -15,7 +17,7 @@ DATASETS_FULL_PATH, VECTORS_FULL_PATH, SUMMARY_FULL_PATH, \
     DATASETS_METADATA_FULL_PATH, SETUPS_METADATA_FULL_PATH, \
     EMBEDDINGS_META_FULL_PATH, PREDICTIONS_FULL_PATH, \
     METRICS_FULL_PATH, AGGREGATED_FULL_PATH, \
-    TABLES_FULL_PATH, FIGURES_FULL_PATH = get_paths(EX_NAME)
+    TABLES_FULL_PATH, FIGURES_FULL_PATH, HARDWARE_PATH = get_paths(EX_NAME)
 
 
 def prepare():
@@ -119,11 +121,18 @@ def vectorize():
         pd.DataFrame(embedding_results).to_csv(EMBEDDINGS_META_FULL_PATH)
 
 
+def record_hardware():
+    hardware_desc = get_system_desc()
+    with open(HARDWARE_PATH, 'wt') as f:
+        json.dump(hardware_desc, f, indent=4)
+
+
 def main():
     prepare()
     record_setups()
     read_datasets()
     vectorize()
+    record_hardware()
 
 
 if __name__ == '__main__':

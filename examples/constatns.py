@@ -20,4 +20,6 @@ def get_paths(ex_name):
            os.path.join(ex_name, OUTPUT_DIR, SUMMARY_DIR, 'metrics.csv'), \
            os.path.join(ex_name, OUTPUT_DIR, SUMMARY_DIR, 'aggregated.csv'), \
            os.path.join(ex_name, OUTPUT_DIR, EXPORT_DIR, TABLES_DIR), \
-           os.path.join(ex_name, OUTPUT_DIR, EXPORT_DIR, FIGURES_DIR)
+           os.path.join(ex_name, OUTPUT_DIR, EXPORT_DIR, FIGURES_DIR), \
+           os.path.join(ex_name, OUTPUT_DIR, SUMMARY_DIR, 'hardware.json')
+
