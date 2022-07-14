@@ -175,18 +175,16 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
             double sum2 = 0;
             double cost = 0;
             if (sparse) {
+                double h_m_plus_t = 0;
+                double h_t = 0;
                 for (int32_t j=0 ; j<x_size ; j++) {
                     T t_centroid_t_j = t_centroid_t[x_indices[j]];
                     T x_data_j = x_data[j];
                     T t_centroid_plus_x_j = x_data_j + t_centroid_t_j;
-                    double log_t_centroid_plus_x_j = log2_ptr(t_centroid_plus_x_j);
-                    sum1 += t_centroid_plus_x_j * (log_x_sum_plus_t_sum - log_t_centroid_plus_x_j);
-                    if (t_centroid_t_j > 0) {
-                        double log_t_centroid_t_j = log2_ptr(t_centroid_t_j);
-                        sum2 += t_centroid_t_j*(log_t_centroid_t_j-log_x_sum_plus_t_sum);
-                    }
+                    h_m_plus_t += t_centroid_plus_x_j * log2_ptr(t_centroid_plus_x_j);
+                    h_t += t_centroid_t_j * log2_ptr(t_centroid_t_j);
                 }
-                cost = sum1 + sum2 + t_sum_t*(log_x_sum_plus_t_sum-t_log_sum_t);
+                cost = h_m_plus_t - h_t + t_sum_t*log2_ptr(t_sum_t) - (x_sum_x+t_sum_t) * log2_ptr(x_sum_x+t_sum_t);
             } else {
                 for (int32_t j=0 ; j<x_size ; j++) {
                     T t_centroid_t_j = t_centroid_t[j];
