@@ -55,14 +55,15 @@ class PSIBOptimizer:
 
         total_cost = 0
 
-        if not self.sparse:
-            t_log_centroid = np.log2(t_centroid, where=t_centroid > 0, out=np.zeros_like(t_centroid, dtype=float))
-            log_t_centroid_plus_x = np.empty_like(t_centroid, dtype=float)
-            log_t_sum_plus_x_sum = np.empty_like(t_sum, dtype=float)
-        else:
-            t_log_centroid = None
-            log_t_centroid_plus_x = None
+        if self.sparse:
             log_t_sum_plus_x_sum = None
+            log_t_centroid_plus_x = None
+            log_t_centroid = None
+        else:
+            log_t_sum_plus_x_sum = np.empty_like(t_sum, dtype=float)
+            log_t_centroid_plus_x = np.empty_like(t_centroid, dtype=float)
+            log_t_centroid = np.zeros_like(t_centroid, dtype=float)
+            np.log2(t_centroid, where=t_centroid > 0, out=log_t_centroid)
 
         for i in range(n_samples):
             x = x_permutation[i] if x_permutation is not None else i
@@ -98,33 +99,31 @@ class PSIBOptimizer:
                 else:
                     old_t_centroid = t_centroid[old_t, :]
                     old_t_centroid -= x_data
-                    old_t_log_centroid = t_log_centroid[old_t, :]
-                    old_t_log_centroid.fill(0)
-                    np.log2(old_t_centroid, where=old_t_centroid > 0, out=old_t_log_centroid)
+                    log_old_t_centroid = log_t_centroid[old_t, :]
+                    log_old_t_centroid.fill(0)
+                    np.log2(old_t_centroid, where=old_t_centroid > 0, out=log_old_t_centroid)
+
+            t_sum_plus_x_sum = t_sum + x_sum_x
 
             if self.sparse:
                 t_centroid_x = t_centroid[:, x_indices]
-                t_sum_plus_x_sum = t_sum + x_sum_x
                 t_centroid_plus_x = t_centroid_x + x_data
                 log_t_centroid_plus_x = np.log2(t_centroid_plus_x)
+                h_m_plus_t = (t_centroid_plus_x[:, None, :] @ log_t_centroid_plus_x[..., None]).ravel()
                 log_t_centroid_x = np.log2(t_centroid_x, where=t_centroid_x > 0,
                                            out=np.zeros_like(t_centroid_x, dtype=float))
-                h_m_plus_t = (t_centroid_plus_x[:, None, :] @ log_t_centroid_plus_x[..., None]).ravel()
                 h_t = (t_centroid_x[:, None, :] @ log_t_centroid_x[..., None]).ravel()
-                tmp_costs = -h_m_plus_t + h_t - t_sum * log_t_sum + t_sum_plus_x_sum * np.log2(t_sum_plus_x_sum)
-                tmp_costs /= xy_sum
             else:
-                t_sum_plus_x_sum = t_sum + x_sum_x
                 t_centroid_plus_x = t_centroid + x_data
                 log_t_centroid_plus_x.fill(0)
+                np.log2(t_centroid_plus_x, where=t_centroid_plus_x > 0, out=log_t_centroid_plus_x)
+                h_m_plus_t = (t_centroid_plus_x[:, None, :] @ log_t_centroid_plus_x[..., None]).ravel()
                 log_t_sum_plus_x_sum.fill(0)
-                np.log2(t_centroid_plus_x, out=log_t_centroid_plus_x, where=t_centroid_plus_x > 0)
-                np.log2(t_sum_plus_x_sum, out=log_t_sum_plus_x_sum, where=t_sum_plus_x_sum > 0)
-                # here we replaced np.einsum('ij,ij->i', U, V) with U[:,None,:] @ V[...,None] as it is faster
-                sum1 = (t_centroid[:, None, :] @ (t_log_centroid - log_t_sum[:, None])[..., None]).ravel()
-                sum2 = (t_centroid_plus_x[:, None, :] @
-                        (log_t_centroid_plus_x - log_t_sum_plus_x_sum[:, None])[..., None]).ravel()
-                tmp_costs = (sum1 - sum2) / xy_sum
+                np.log2(t_sum_plus_x_sum, where=t_sum_plus_x_sum > 0, out=log_t_sum_plus_x_sum)
+                h_t = (t_centroid[:, None, :] @ log_t_centroid[..., None]).ravel()
+
+            tmp_costs = -h_m_plus_t + h_t - t_sum * log_t_sum + t_sum_plus_x_sum * np.log2(t_sum_plus_x_sum)
+            tmp_costs /= xy_sum
 
             new_t = np.argmin(tmp_costs).item()
             if ref_labels is not None:
@@ -146,9 +145,9 @@ class PSIBOptimizer:
                 else:
                     new_t_centroid = t_centroid[new_t, :]
                     new_t_centroid += x_data
-                    new_t_log_centroid = t_log_centroid[new_t, :]
-                    new_t_log_centroid.fill(0)
-                    np.log2(new_t_centroid, where=new_t_centroid > 0, out=new_t_log_centroid)
+                    log_new_t_centroid = log_t_centroid[new_t, :]
+                    log_new_t_centroid.fill(0)
+                    np.log2(new_t_centroid, where=new_t_centroid > 0, out=log_new_t_centroid)
 
                 if new_t != old_t:
                     # update the changes counter
