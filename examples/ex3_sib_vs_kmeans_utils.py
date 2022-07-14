@@ -1,3 +1,7 @@
+import platform
+
+import psutil
+
 
 def populate_kwargs(base_params, params):
     param_sets = [base_params]
@@ -14,3 +18,17 @@ def populate_kwargs(base_params, params):
 
 def str_kwargs(d):
     return '_'.join([(key + '-' + str(value)) for key, value in d.items()])
+
+
+def get_system_desc():
+    return {
+        'machine': platform.machine(),
+        'version': platform.version(),
+        'platform': platform.platform(),
+        'uname': platform.uname(),
+        'system': platform.system(),
+        'processor': platform.processor(),
+        'ram': str(round(psutil.virtual_memory().total / (1024.0 ** 3)))+" GB",
+        'cpus_physical': psutil.cpu_count(logical=False),
+        'cpus_logical': psutil.cpu_count(logical=True)
+    }

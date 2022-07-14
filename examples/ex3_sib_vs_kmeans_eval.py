@@ -13,13 +13,13 @@ from sklearn.metrics import adjusted_mutual_info_score, adjusted_rand_score, \
 from tqdm import tqdm
 
 from constatns import get_paths
-from ex5_sib_vs_kmeans_setup import EMBEDDING_VIEW_ORDER, ALGORITHM_VIEW_ORDER, ALGORITHMS, EMBEDDINGS
+from ex3_sib_vs_kmeans_setup import EMBEDDING_VIEW_ORDER, ALGORITHM_VIEW_ORDER, ALGORITHMS, EMBEDDINGS
 
 tqdm.pandas()
 
 random.seed(1024)
 
-EX_NAME = 'ex5'
+EX_NAME = 'ex3'
 
 DATASETS_FULL_PATH, VECTORS_FULL_PATH, SUMMARY_FULL_PATH, \
     DATASETS_METADATA_FULL_PATH, SETUPS_METADATA_FULL_PATH, \

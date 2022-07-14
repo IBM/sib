@@ -8,8 +8,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from constatns import get_paths
-from ex5_sib_vs_kmeans_setup import N_RUNS, SETUPS, DATASETS, ALGORITHMS, EMBEDDINGS, HIDDEN_PARAMS, EX_NAME
-from ex5_sib_vs_kmeans_utils import populate_kwargs, str_kwargs
+from ex3_sib_vs_kmeans_setup import N_RUNS, SETUPS, DATASETS, ALGORITHMS, EMBEDDINGS, HIDDEN_PARAMS, EX_NAME
+from ex3_sib_vs_kmeans_utils import populate_kwargs, str_kwargs
 
 DATASETS_FULL_PATH, VECTORS_FULL_PATH, SUMMARY_FULL_PATH, \
     DATASETS_METADATA_FULL_PATH, SETUPS_METADATA_FULL_PATH, \
@@ -96,7 +96,6 @@ def cluster():
 
 def main():
     cluster()
-
 
 
 if __name__ == '__main__':

@@ -7,9 +7,8 @@ from time import time
 import pandas as pd
 
 from constatns import get_paths
-from ex5_sib_vs_kmeans_setup import SETUPS, DATASETS, ALGORITHMS, EMBEDDINGS, DATASET_MAX_SIZE, EX_NAME
-from ex5_sib_vs_kmeans_utils import populate_kwargs, str_kwargs
-from example_utils import get_system_desc
+from ex3_sib_vs_kmeans_setup import SETUPS, DATASETS, ALGORITHMS, EMBEDDINGS, DATASET_MAX_SIZE, EX_NAME
+from ex3_sib_vs_kmeans_utils import populate_kwargs, str_kwargs, get_system_desc
 from vectorizers import GloveVectorizer
 
 

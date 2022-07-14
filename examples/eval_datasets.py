@@ -9,25 +9,25 @@ from sklearn.utils import Bunch
 from datasets import load_dataset, Split
 
 
-def fetch_20ng(max_size) -> Bunch:
-    dataset = fetch_20newsgroups(subset='all', categories=None,
+def fetch_20ng(max_size=None, subset='all') -> Bunch:
+    dataset = fetch_20newsgroups(subset=subset, categories=None,
                                  shuffle=True, random_state=256)
     return prepare_dataset(dataset, max_size)
 
 
-def fetch_dbpedia(max_size) -> Bunch:
+def fetch_dbpedia(max_size=None) -> Bunch:
     return fetch_hf_dataset('dbpedia_14', max_size,  text_column='content')
 
 
-def fetch_ag_news(max_size) -> Bunch:
+def fetch_ag_news(max_size=None) -> Bunch:
     return fetch_hf_dataset('ag_news', max_size)
 
 
-def fetch_bbc_news(max_size) -> Bunch:
+def fetch_bbc_news(max_size=None) -> Bunch:
     return fetch_hf_dataset('SetFit/bbc-news', max_size)
 
 
-def fetch_yahoo_answers(max_size) -> Bunch:
+def fetch_yahoo_answers(max_size=None) -> Bunch:
     return fetch_hf_dataset('yahoo_answers_topics', max_size, label_column='topic',
                             text_column=['question_title', 'question_content', 'best_answer'])
 
@@ -50,7 +50,7 @@ def fetch_hf_dataset(name, max_size, label_column: str = 'label', text_column: U
     return prepare_dataset(dataset, max_size)
 
 
-def prepare_dataset(dataset: Bunch, max_size: int) -> Bunch:
+def prepare_dataset(dataset: Bunch, max_size: Union[int, None]) -> Bunch:
     # add size information
     dataset.n_clusters = np.unique(dataset.target).shape[0]
     dataset.n_samples = len(dataset.target)
