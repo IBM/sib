@@ -1,0 +1,21 @@
+,dataset,embedding,vectorizer_name,vectorizer_params,vectorizer_time,vectors_file_name
+0,20 News Groups,tf,TF,"{'max_features': 10000, 'stop_words': 'english'}",3.292309045791626,tf_max_features-10000_stop_words-english.pkl
+1,20 News Groups,tfidf,TF/IDF,"{'max_features': 10000, 'stop_words': 'english'}",3.4290239810943604,tfidf_max_features-10000_stop_words-english.pkl
+2,20 News Groups,glove,GloVe,{},18.70971393585205,glove_.pkl
+3,20 News Groups,sbert,S-Bert,{},1346.6657230854034,sbert_.pkl
+4,DBPedia,tf,TF,"{'max_features': 10000, 'stop_words': 'english'}",20.288550853729248,tf_max_features-10000_stop_words-english.pkl
+5,DBPedia,tfidf,TF/IDF,"{'max_features': 10000, 'stop_words': 'english'}",20.4782292842865,tfidf_max_features-10000_stop_words-english.pkl
+6,DBPedia,glove,GloVe,{},88.21520495414734,glove_.pkl
+7,DBPedia,sbert,S-Bert,{},13111.03449511528,sbert_.pkl
+8,BBC News,tf,TF,"{'max_features': 10000, 'stop_words': 'english'}",0.53342604637146,tf_max_features-10000_stop_words-english.pkl
+9,BBC News,tfidf,TF/IDF,"{'max_features': 10000, 'stop_words': 'english'}",0.4721040725708008,tfidf_max_features-10000_stop_words-english.pkl
+10,BBC News,glove,GloVe,{},5.373144149780273,glove_.pkl
+11,BBC News,sbert,S-Bert,{},175.44120478630066,sbert_.pkl
+12,AG NEWS,tf,TF,"{'max_features': 10000, 'stop_words': 'english'}",3.076880931854248,tf_max_features-10000_stop_words-english.pkl
+13,AG NEWS,tfidf,TF/IDF,"{'max_features': 10000, 'stop_words': 'english'}",3.125962018966675,tfidf_max_features-10000_stop_words-english.pkl
+14,AG NEWS,glove,GloVe,{},19.107324838638306,glove_.pkl
+15,AG NEWS,sbert,S-Bert,{},2297.508441925049,sbert_.pkl
+16,Yahoo! Answers,tf,TF,"{'max_features': 10000, 'stop_words': 'english'}",74.59512400627136,tf_max_features-10000_stop_words-english.pkl
+17,Yahoo! Answers,tfidf,TF/IDF,"{'max_features': 10000, 'stop_words': 'english'}",76.14011192321777,tfidf_max_features-10000_stop_words-english.pkl
+18,Yahoo! Answers,glove,GloVe,{},380.64488101005554,glove_.pkl
+19,Yahoo! Answers,sbert,S-Bert,{},58809.55579209328,sbert_.pkl

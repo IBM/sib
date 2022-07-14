@@ -1,0 +1,6 @@
+,dataset,n_samples,n_samples_org,word_count_mean,word_count_std,word_count_median,n_clusters,topics
+0,20 News Groups,18846,18846,283.6560012734798,520.3297353354685,175.0,20,"['alt.atheism', 'comp.graphics', 'comp.os.ms-windows.misc', 'comp.sys.ibm.pc.hardware', 'comp.sys.mac.hardware', 'comp.windows.x', 'misc.forsale', 'rec.autos', 'rec.motorcycles', 'rec.sport.baseball', 'rec.sport.hockey', 'sci.crypt', 'sci.electronics', 'sci.med', 'sci.space', 'soc.religion.christian', 'talk.politics.guns', 'talk.politics.mideast', 'talk.politics.misc', 'talk.religion.misc']"
+1,DBPedia,630000,630000,46.13414761904762,22.45746829440223,46.0,14,"['Company', 'EducationalInstitution', 'Artist', 'Athlete', 'OfficeHolder', 'MeanOfTransportation', 'Building', 'NaturalPlace', 'Village', 'Animal', 'Plant', 'Album', 'Film', 'WrittenWork']"
+2,BBC News,2225,2225,390.2952808988764,241.6987957466287,337.0,5,"['tech', 'business', 'sport', 'entertainment', 'politics']"
+3,AG NEWS,127600,127600,37.84,10.087872323987769,37.0,4,"['World', 'Sports', 'Business', 'Sci/Tech']"
+4,Yahoo! Answers,1460000,1460000,91.5707308219178,98.71321536431577,60.0,10,"['Society & Culture', 'Science & Mathematics', 'Health', 'Education & Reference', 'Computers & Internet', 'Sports', 'Business & Finance', 'Entertainment & Music', 'Family & Relationships', 'Politics & Government']"
