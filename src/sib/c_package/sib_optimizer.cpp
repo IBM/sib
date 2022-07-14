@@ -8,6 +8,8 @@
 
 #include "sib_optimizer.h"
 #include <cmath>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 // disable the warnings about possible loss of data when converting T to double
@@ -169,38 +171,31 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
         for (int32_t t=0 ; t<this->n_clusters ; t++) {
             T *t_centroid_t = &(t_centroid[n_features * t]);
             T t_sum_t = t_sum[t];
-            double log_x_sum_plus_t_sum = log2_ptr(x_sum_x+t_sum_t);
-            double t_log_sum_t = t_log_sum[t];
-            double sum1 = 0;
-            double sum2 = 0;
             double cost = 0;
+            double h_m_plus_t = 0;
+            double h_t = 0;
             if (sparse) {
-                double h_m_plus_t = 0;
-                double h_t = 0;
                 for (int32_t j=0 ; j<x_size ; j++) {
                     T t_centroid_t_j = t_centroid_t[x_indices[j]];
                     T x_data_j = x_data[j];
                     T t_centroid_plus_x_j = x_data_j + t_centroid_t_j;
                     h_m_plus_t += t_centroid_plus_x_j * log2_ptr(t_centroid_plus_x_j);
-                    h_t += t_centroid_t_j * log2_ptr(t_centroid_t_j);
+                    if (t_centroid_t_j > 0)
+                        h_t += t_centroid_t_j * log2_ptr(t_centroid_t_j);
                 }
-                cost = h_m_plus_t - h_t + t_sum_t*log2_ptr(t_sum_t) - (x_sum_x+t_sum_t) * log2_ptr(x_sum_x+t_sum_t);
             } else {
                 for (int32_t j=0 ; j<x_size ; j++) {
                     T t_centroid_t_j = t_centroid_t[j];
                     T x_data_j = x_data[j];
                     T t_centroid_plus_x_j = x_data_j + t_centroid_t_j;
                     if (t_centroid_plus_x_j > 0) {
-                        double log_t_centroid_plus_x_j = log2_ptr(t_centroid_plus_x_j);
-                        if (t_centroid_t_j > 0) {
-                            double log_t_centroid_t_j = log2_ptr(t_centroid_t_j);
-                            sum1 += t_centroid_t_j*(log_t_centroid_t_j-t_log_sum_t);
-                        }
-                        sum2 += t_centroid_plus_x_j * (log_t_centroid_plus_x_j - log_x_sum_plus_t_sum);
+                        h_m_plus_t += t_centroid_plus_x_j * log2_ptr(t_centroid_plus_x_j);
+                        if (t_centroid_t_j > 0)
+                            h_t += t_centroid_t_j * log2_ptr(t_centroid_t_j);
                     }
                 }
-                cost = sum1 - sum2;
             }
+            cost = -h_m_plus_t + h_t - t_sum_t*log2_ptr(t_sum_t) + (x_sum_x+t_sum_t) * log2_ptr(x_sum_x+t_sum_t);
             cost /= xy_sum;
 
             if (min_cost_t == -1 || cost < min_cost) {
@@ -216,6 +211,8 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
                 x_costs[t] = cost;
             }
         }
+
+        //exit(0);
 
         int32_t new_t = min_cost_t;
 
