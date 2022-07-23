@@ -41,7 +41,8 @@ void SIBOptimizer<T>::init_centroids(
         int32_t n_samples, const int32_t *xy_indices,
         const int32_t *xy_indptr, const T *xy_data,
         const T* x_sum, int32_t *labels, bool *x_ignore,
-        int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid) {
+        int32_t *t_size, T *t_sum, double *t_log_sum, T *t_centroid,
+        double *t_centroid_log_t_centroid, double *t_centroid_log_t_centroid_sum) {
 
     int32_t x_start = 0;
     int32_t x_end = n_features;
@@ -87,8 +88,20 @@ void SIBOptimizer<T>::init_centroids(
         t_log_sum[t] = log2_ptr(t_sum[t]);
     }
 
+    // compute t_centroid * log(t_centroid) and its sum over all features
+    for (int32_t t=0; t<n_clusters ; t++) {
+        T *t_centroid_t = &t_centroid[t * n_features];
+        double *t_centroid_log_t_centroid_t = &(t_centroid_log_t_centroid[t * n_features]);
+        double t_centroid_sum = 0;
+        for (int32_t j=0 ; j<n_features ; j++) {
+            T t_centroid_t_j = t_centroid_t[j];
+            double value = t_centroid_t_j > 0 ? t_centroid_t_j * log2_ptr(t_centroid_t_j) : 0;
+            t_centroid_log_t_centroid_t[j] = value;
+            t_centroid_sum += value;
+        }
+        t_centroid_log_t_centroid_sum[t] = t_centroid_sum;
+    }
 }
-
 
 // sIB iteration over n samples for clustering / classification.
 template <typename T>
@@ -99,6 +112,8 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
         int32_t* x_permutation,                             // order of iteration
         int32_t *t_size, T *t_sum,                          // current clusters
         double *t_log_sum, T *t_centroid,
+        double *t_centroid_log_t_centroid,
+        double *t_centroid_log_t_centroid_sum,
         int32_t *labels, bool *x_locked_in,
         double* costs, double* total_cost, // assigned labels and costs
         double* ity, double* ht, double* change_rate) {     // stats on updates
@@ -141,7 +156,6 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
             x_data = &(xy_data[x * n_features]);
         }
 
-
         T x_sum_x = x_sum[x];
 
         if (clustering_mode) {
@@ -149,15 +163,27 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
             t_size[old_t]--;
             t_sum[old_t] -= x_sum_x;
             t_log_sum[old_t] = log2_ptr(t_sum[old_t]);
-            T *old_t_centroid = &(t_centroid[n_features * old_t]);
+            T *t_centroid_old_t = &(t_centroid[n_features * old_t]);
+            double *t_centroid_log_t_centroid_old_t = &(t_centroid_log_t_centroid[n_features * old_t]);
+
             if (sparse) {
                 for (int32_t j=0 ; j<x_size ; j++) {
-                    old_t_centroid[x_indices[j]] -= x_data[j];
+                    int32_t x_indices_j = x_indices[j];
+                    t_centroid_old_t[x_indices_j] -= x_data[j];
+                    T t_centroid_old_t_x_j = t_centroid_old_t[x_indices_j];
+                    t_centroid_log_t_centroid_old_t[x_indices_j] = t_centroid_old_t_x_j > 0 ?
+                        t_centroid_old_t_x_j * log2_ptr(t_centroid_old_t_x_j) : 0;
                 }
             } else {
                 for (int32_t j=0 ; j<x_size ; j++) {
-                    old_t_centroid[j] -= x_data[j];
+                    t_centroid_old_t[j] -= x_data[j];
                 }
+                double sum = 0;
+                for (int32_t j=0 ; j<x_size ; j++) {
+                    T t_centroid_old_t_j = t_centroid_old_t[j];
+                    sum += t_centroid_old_t_j > 0 ? t_centroid_old_t_j * log2_ptr(t_centroid_old_t_j) : 0;
+                }
+                t_centroid_log_t_centroid_sum[old_t] = sum;
             }
         }
 
@@ -175,23 +201,18 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
             double h_m_plus_t = 0;
             double h_t = 0;
             if (sparse) {
+                double *t_centroid_log_t_centroid_t = &(t_centroid_log_t_centroid[n_features * t]);
                 for (int32_t j=0 ; j<x_size ; j++) {
-                    T t_centroid_t_j = t_centroid_t[x_indices[j]];
-                    T x_data_j = x_data[j];
-                    T t_centroid_plus_x_j = x_data_j + t_centroid_t_j;
-                    h_m_plus_t += t_centroid_plus_x_j * log2_ptr(t_centroid_plus_x_j);
-                    if (t_centroid_t_j > 0)
-                        h_t += t_centroid_t_j * log2_ptr(t_centroid_t_j);
+                    T t_centroid_plus_x = x_data[j] + t_centroid_t[x_indices[j]];
+                    h_m_plus_t += t_centroid_plus_x * log2_ptr(t_centroid_plus_x);
+                    h_t += t_centroid_log_t_centroid_t[x_indices[j]];
                 }
             } else {
+                h_t = t_centroid_log_t_centroid_sum[t];
                 for (int32_t j=0 ; j<x_size ; j++) {
-                    T t_centroid_t_j = t_centroid_t[j];
-                    T x_data_j = x_data[j];
-                    T t_centroid_plus_x_j = x_data_j + t_centroid_t_j;
+                    T t_centroid_plus_x_j = x_data[j] + t_centroid_t[j];
                     if (t_centroid_plus_x_j > 0) {
                         h_m_plus_t += t_centroid_plus_x_j * log2_ptr(t_centroid_plus_x_j);
-                        if (t_centroid_t_j > 0)
-                            h_t += t_centroid_t_j * log2_ptr(t_centroid_t_j);
                     }
                 }
             }
@@ -212,8 +233,6 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
             }
         }
 
-        //exit(0);
-
         int32_t new_t = min_cost_t;
 
         if (clustering_mode) {
@@ -222,15 +241,26 @@ void SIBOptimizer<T>::iterate(bool clustering_mode,      // clustering / classif
             t_size[new_t]++;
             t_sum[new_t] += x_sum_x;
             t_log_sum[new_t] = log2_ptr(t_sum[new_t]);
-            T *new_t_centroid = &(t_centroid[n_features * new_t]);
+            T *t_centroid_new_t = &(t_centroid[n_features * new_t]);
+            double *t_centroid_log_t_centroid_new_t = &(t_centroid_log_t_centroid[n_features * new_t]);
             if (sparse) {
                 for (int32_t j=0 ; j<x_size ; j++) {
-                    new_t_centroid[x_indices[j]] += x_data[j];
+                    int x_indices_j = x_indices[j];
+                    t_centroid_new_t[x_indices_j] += x_data[j];
+                    T t_centroid_new_t_x_j = t_centroid_new_t[x_indices_j];
+                    t_centroid_log_t_centroid_new_t[x_indices_j] = t_centroid_new_t_x_j > 0 ?
+                        t_centroid_new_t_x_j * log2_ptr(t_centroid_new_t_x_j) : 0;
                 }
             } else {
                 for (int32_t j=0 ; j<x_size ; j++) {
-                    new_t_centroid[j] += x_data[j];
+                    t_centroid_new_t[j] += x_data[j];
                 }
+                double sum = 0;
+                for (int32_t j=0 ; j<x_size ; j++) {
+                    T t_centroid_new_t_j = t_centroid_new_t[j];
+                    sum += t_centroid_new_t_j > 0 ? t_centroid_new_t_j * log2_ptr(t_centroid_new_t_j) : 0;
+                }
+                t_centroid_log_t_centroid_sum[new_t] = sum;
             }
 
             if (new_t != old_t) {
