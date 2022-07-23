@@ -1,0 +1,18 @@
+{
+    "machine": "x86_64",
+    "version": "Darwin Kernel Version 21.5.0: Tue Apr 26 21:08:22 PDT 2022; root:xnu-8020.121.3~4/RELEASE_X86_64",
+    "platform": "macOS-10.16-x86_64-i386-64bit",
+    "uname": [
+        "Darwin",
+        "Assafs-MacBook-Pro.local",
+        "21.5.0",
+        "Darwin Kernel Version 21.5.0: Tue Apr 26 21:08:22 PDT 2022; root:xnu-8020.121.3~4/RELEASE_X86_64",
+        "x86_64",
+        "i386"
+    ],
+    "system": "Darwin",
+    "processor": "i386",
+    "ram": "64 GB",
+    "cpus_physical": 8,
+    "cpus_logical": 16
+}

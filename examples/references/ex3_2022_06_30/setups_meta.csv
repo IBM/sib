@@ -1,0 +1,6 @@
+,algorithm,embedding
+0,sIB,TF
+1,K-Means,TF
+2,K-Means,TF/IDF
+3,K-Means,GloVe
+4,K-Means,S-Bert

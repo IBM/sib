@@ -6,3 +6,7 @@ scikit-learn
 pandas
 nltk
 scipy
+datasets
+wget
+sentence_transformers
+psutil
