@@ -4,7 +4,6 @@
 # http://www.apache.org/licenses/LICENSE-2.0
 
 import os
-import pickle
 from time import time
 
 from sib import SIB, clustering_utils
@@ -21,7 +20,7 @@ DATASET_NAME = '20 News Groups'
 DATASET_FETCHER = fetch_20ng
 N_INIT = 10
 
-DATASETS_FULL_PATH, VECTORS_FULL_PATH, SUMMARY_FULL_PATH, \
+DATASETS_FULL_PATH, _, SUMMARY_FULL_PATH, \
     _, _, _, _, _, _, _, _, _ = get_paths(EX_NAME)
 
 # dataset reading
@@ -32,26 +31,17 @@ print("done in %.3f sec." % (time() - t0), end=" ", flush=True)
 print("%d samples, %d classes" % (dataset.n_samples, dataset.n_clusters))
 
 # vectorization stage
-vectors_path = os.path.join(VECTORS_FULL_PATH, 'vectors.pkl')
-if os.path.exists(vectors_path):
-    print("Reading vectors from file.")
-    with open(vectors_path, "rb") as fp:
-        vectors, terms = pickle.load(fp)
-else:
-    print("Vectorizing texts...", end=" ", flush=True)
-    vectorizing_start_t = time()
-    vectorizer = CountVectorizer(tokenizer=custom_tokenizer.custom_tokenizer,
-                                 max_df=0.5, min_df=10, max_features=5000)
-    vectors = vectorizer.fit_transform(dataset.data)
-    terms = vectorizer.get_feature_names_out()
-    vectorizing_end_t = time()
-    print("done in %.3f secs." % (vectorizing_end_t - vectorizing_start_t))
-    os.makedirs(VECTORS_FULL_PATH, exist_ok=True)
-    with open(vectors_path, "wb") as fp:
-        pickle.dump((vectors, terms), fp)
+print("Preprocessing and vectorizing texts...", end=" ", flush=True)
+vectorizing_start_t = time()
+vectorizer = CountVectorizer(tokenizer=custom_tokenizer.custom_tokenizer,
+                             max_df=0.5, min_df=10, max_features=5000)
+vectors = vectorizer.fit_transform(dataset.data)
+terms = vectorizer.get_feature_names_out()
+vectorizing_end_t = time()
+print("done in %.3f secs." % (vectorizing_end_t - vectorizing_start_t))
 
 # clustering stage
-print("Clustering texts...", end=" ", flush=True)
+print("Clustering vectors...", end=" ", flush=True)
 clustering_start_t = time()
 sib = SIB(n_clusters=dataset.n_clusters, random_state=128, n_init=N_INIT)
 sib.fit(vectors)

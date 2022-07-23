@@ -50,7 +50,7 @@ DATASET_MAX_SIZE = None
 
 HIDDEN_PARAMS = ['n_clusters']
 
-EX_NAME = 'ex5'
+EX_NAME = 'ex3'
 
 ALGORITHM_VIEW_ORDER = ['kmeans', 'sib']
 EMBEDDING_VIEW_ORDER = ['tf', 'tfidf', 'glove', 'sbert']

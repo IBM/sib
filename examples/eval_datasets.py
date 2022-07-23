@@ -56,7 +56,7 @@ def prepare_dataset(dataset: Bunch, max_size: Union[int, None]) -> Bunch:
     dataset.n_samples = len(dataset.target)
     dataset.n_samples_org = dataset.n_samples
 
-    # reduce the dataset if its too large
+    # reduce the dataset if it's too large
     if max_size and dataset.n_samples > max_size:
         print(f"Using a sample of {max_size} out of {dataset.n_samples}")
         data, target = zip(*random.sample(list(
@@ -76,7 +76,7 @@ def prepare_dataset(dataset: Bunch, max_size: Union[int, None]) -> Bunch:
     dataset.word_count_std = np.std(word_count)
     dataset.word_count_median = np.median(word_count)
 
-    # offset the class ids to 0 if needs to
+    # offset the class ids to 0 if it needs to
     dataset.target -= np.min(dataset.target)
 
     return dataset
