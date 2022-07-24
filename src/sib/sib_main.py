@@ -557,8 +557,8 @@ class Partition:
         t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
         t_log_sum = np.empty(n_clusters, dtype=np.float64)
         t_centroid = np.zeros((n_clusters, n_features), dtype=xy.dtype)
-        t_centroid_log_t_centroid = np.empty((n_clusters, n_features), dtype=xy.dtype)
-        t_centroid_log_t_centroid_sum = np.empty(n_clusters, dtype=x_sum.dtype)
+        t_centroid_log_t_centroid = np.empty((n_clusters, n_features), dtype=np.float64)
+        t_centroid_log_t_centroid_sum = np.empty(n_clusters, dtype=np.float64)
         optimizer.init_centroids(self.labels, self.locked_in, t_size, t_sum, t_log_sum, t_centroid,
                                  t_centroid_log_t_centroid, t_centroid_log_t_centroid_sum)
         return t_size, t_sum, t_log_sum, t_centroid, t_centroid_log_t_centroid, t_centroid_log_t_centroid_sum
