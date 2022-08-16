@@ -310,11 +310,13 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
             partition.labels, partition.locked_in, partition.ity)
 
         if v_optimizer:
+            # labels_ref = partition.labels
+            labels_ref = None
             v_partition.change_ratio, v_partition.ity, v_partition.ht = v_optimizer.optimize(
                 x_permutation, v_partition.t_size, v_partition.t_sum, v_partition.t_log_sum,
                 v_partition.t_centroid, v_partition.t_centroid_log_t_centroid,
                 v_partition.t_centroid_log_t_centroid_sum,
-                v_partition.labels, partition.locked_in, v_partition.ity)
+                v_partition.labels, partition.locked_in, v_partition.ity, labels_ref)
             assert np.allclose(partition.labels, v_partition.labels)
             assert np.allclose(partition.locked_in, v_partition.locked_in)
             assert np.allclose(partition.change_ratio, v_partition.change_ratio)

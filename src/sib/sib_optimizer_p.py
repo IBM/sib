@@ -100,24 +100,20 @@ class PSIBOptimizer:
             x_sum_x = x_sum[x]
 
             if clustering_mode:
-                # withdraw x from its current cluster
+                # draw x out of its current cluster
                 t_size[old_t] -= 1
                 t_sum[old_t] -= x_sum_x
                 log_t_sum[old_t] = np.log2(t_sum[old_t])
                 if self.sparse:
                     t_centroid[old_t, x_indices] -= x_data
-                    t_centroid[old_t, x_indices] = np.clip(t_centroid[old_t, x_indices], a_min=0, a_max=None)
-
-                    t_centroid_old_t_x = t_centroid[old_t, x_indices]
-                    t_centroid_log_t_centroid[old_t, x_indices] = xlogy(t_centroid_old_t_x,
-                                                                        t_centroid_old_t_x) / np.log(2)
+                    t_centroid_log_t_centroid[old_t, x_indices] = xlogy(np.clip(t_centroid[old_t, x_indices],
+                                                                                a_min=0, a_max=None),
+                                                                        t_centroid[old_t, x_indices]) / np.log(2)
                 else:
                     t_centroid[old_t, :] -= x_data
-                    t_centroid[old_t, :] = np.clip(t_centroid[old_t, :], a_min=0, a_max=None)
-
-                    t_centroid_old_t = t_centroid[old_t, :]
-                    t_centroid_log_t_centroid_sum[old_t] = np.sum(xlogy(t_centroid_old_t,
-                                                                        t_centroid_old_t)) / np.log(2)
+                    t_centroid_log_t_centroid_sum[old_t] = np.sum(xlogy(np.clip(t_centroid[old_t, :],
+                                                                                a_min=0, a_max=None),
+                                                                        t_centroid[old_t, :])) / np.log(2)
 
             if self.sparse:
                 t_centroid_log_t_centroid_sum = np.sum(t_centroid_log_t_centroid[:, x_indices], axis=1)
@@ -132,7 +128,8 @@ class PSIBOptimizer:
 
             else:
                 t_centroid_plus_x = t_centroid + x_data
-                h_m_plus_t = np.sum(xlogy(t_centroid_plus_x, t_centroid_plus_x), axis=1) / np.log(2)
+                h_m_plus_t = np.sum(xlogy(np.clip(t_centroid_plus_x, a_min=0, a_max=None),
+                                          t_centroid_plus_x), axis=1) / np.log(2)
 
             h_t = t_centroid_log_t_centroid_sum
 
@@ -166,7 +163,7 @@ class PSIBOptimizer:
                     t_centroid_new_t = t_centroid[new_t, :]
                     t_centroid_new_t += x_data
 
-                    t_centroid_log_t_centroid_sum[new_t] = np.sum(xlogy(t_centroid_new_t,
+                    t_centroid_log_t_centroid_sum[new_t] = np.sum(xlogy(np.clip(t_centroid_new_t, a_min=0, a_max=None),
                                                                         t_centroid_new_t)) / np.log(2)
 
                 if new_t != old_t:
