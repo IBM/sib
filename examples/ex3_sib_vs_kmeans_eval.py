@@ -146,12 +146,13 @@ def create_plots():
                 'v-measure': ('V-Measure', ''),
                 'micro_f1': ('Micro Average F1', ''),
                 'macro_f1': ('Macro Average F1', ''),
-                'total_time': ('Total Run Time', '')}
+                'total_time': ('Total Run-Time', '')}
 
     groups = [[['ami', 'ari']],
-              [['micro_f1', 'macro_f1']]]
-    group_figsize = [(17, 8), (17, 8)]
-    group_padding = [(None, 0.03), (None, 0.03)]
+              [['micro_f1', 'macro_f1'],
+               ['v-measure', 'total_time']]]
+    group_figsize = [(17, 8), (17, 16)]
+    group_padding = [(None, 0.03), (0.04, 0.03)]
     time_measures = {'total_time'}
 
     # Okabe and Ito 2008 palette
@@ -209,7 +210,8 @@ def create_plots():
                                color=colors[setup_id % len(colors)])
 
                 if log_scale:
-                    autolabel(ax, rects)
+                    rotate = df_setup['vectorizer_name'].iloc[0] != EMBEDDINGS['sbert'][0]
+                    autolabel(ax, rects, rotate)
 
             ax.set_title(title, fontsize=14)
             if upper_bound:
@@ -252,16 +254,17 @@ def format_seconds(seconds):
         return f'{m:02d}:{round(s):02d}'
 
 
-def autolabel(ax, rects):
+def autolabel(ax, rects, rotate):
     """
     Attach a text label above each bar displaying its height
     """
     for rect in rects:
         height = rect.get_height()
-        ax.text(rect.get_x() + rect.get_width()/2., 1.05*height,
+        value = format_seconds(height)
+        rotation = 45 if rotate else 0
+        ax.text(rect.get_x() + rect.get_width()/2., 1.05*height, value,
                 # '%.2f' % height,
-                format_seconds(height),
-                ha='center', va='bottom', fontsize=10)
+                ha='center', va='bottom', fontsize=9, rotation=rotation)
 
 
 def create_results_table():
