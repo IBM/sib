@@ -41,7 +41,7 @@ jobs:
           CIBW_ARCHS_MACOS: x86_64 arm64 universal2
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_WINDOWS: AMD64
-          CIBW_SKIP: pp*
+          CIBW_SKIP: pp* *muslinux*
 
       - uses: actions/upload-artifact@v3
         with:
