@@ -55,7 +55,6 @@ setup(
     package_dir={'': 'src'},
     ext_modules = cythonize(extensions),
     classifiers=[
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
@@ -67,5 +66,5 @@ setup(
         'Intended Audience :: Developers',
     ],
     install_requires=install_requires,
-    python_requires='>=3.6, <3.11',
+    python_requires='>=3.7, <3.11',
 )
