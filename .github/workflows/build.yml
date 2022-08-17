@@ -29,6 +29,7 @@ jobs:
         os: [ubuntu-20.04, windows-latest, macos-latest]
 
     env:
+      CIBW_TEST_REQUIRES: pytest
       CIBW_TEST_COMMAND: "pytest {project}/tests"
 
     steps:
