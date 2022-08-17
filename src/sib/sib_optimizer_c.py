@@ -24,21 +24,28 @@ class CSIBOptimizer:
         self.sparse = issparse(xy)
         self.xy_indices, self.xy_indptr, self.xy_data = self.get_data(self.xy)
 
-    def init_centroids(self, labels, x_ignore, t_size, t_sum, t_log_sum, t_centroid):
+    def init_centroids(self, labels, x_ignore, t_size, t_sum, t_log_sum, t_centroid,
+                       t_centroid_log_t_centroid, t_centroid_log_t_centroid_sum):
         return self.c_sib_optimizer.init_centroids(self.n_samples, self.xy_indices, self.xy_indptr,
                                                    self.xy_data, self.x_sum, labels, x_ignore,
-                                                   t_size, t_sum, t_log_sum, t_centroid)
+                                                   t_size, t_sum, t_log_sum, t_centroid,
+                                                   t_centroid_log_t_centroid, t_centroid_log_t_centroid_sum)
 
-    def optimize(self, x_permutation, t_size, t_sum, t_log_sum, t_centroid, labels, x_locked_in, ity):
+    def optimize(self, x_permutation, t_size, t_sum, t_log_sum, t_centroid,
+                 t_centroid_log_t_centroid, t_centroid_log_t_centroid_sum,
+                 labels, x_locked_in, ity):
         return self.c_sib_optimizer.optimize(self.n_samples, self.xy_indices,
                                              self.xy_indptr, self.xy_data, self.xy_sum,
                                              self.x_sum, x_permutation, t_size, t_sum,
-                                             t_log_sum, t_centroid, labels, x_locked_in, ity)
+                                             t_log_sum, t_centroid, t_centroid_log_t_centroid,
+                                             t_centroid_log_t_centroid_sum, labels, x_locked_in, ity)
 
-    def infer(self, n_samples, xy, xy_sum, x_sum, t_size, t_sum, t_log_sum, t_centroid, labels, x_locked_in, costs):
+    def infer(self, n_samples, xy, xy_sum, x_sum, t_size, t_sum, t_log_sum, t_centroid,
+              t_centroid_log_t_centroid, t_centroid_log_t_centroid_sum, labels, x_locked_in, costs):
         xy_indices, xy_indptr, xy_data = self.get_data(xy)
         return self.c_sib_optimizer.infer(n_samples, xy_indices, xy_indptr, xy_data, xy_sum, x_sum,
-                                          t_size, t_sum, t_log_sum, t_centroid, labels, x_locked_in, costs)
+                                          t_size, t_sum, t_log_sum, t_centroid, t_centroid_log_t_centroid,
+                                          t_centroid_log_t_centroid_sum, labels, x_locked_in, costs)
 
     def get_data(self, xy):
         if self.sparse:

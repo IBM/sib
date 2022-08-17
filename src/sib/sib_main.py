@@ -27,7 +27,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
     n_init : int, default=10
         Number of times the sIB algorithm will be run with different
         centroid seeds. The final result will be the initialization
-        with highest mutual information between the clustering
+        with the highest mutual information between the clustering
         analysis and the vocabulary.
 
     max_iter : int, default=15
@@ -123,7 +123,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         self.costs_ = None
 
     def __str__(self):
-        param_values = [("n_cluseters", self.n_clusters), ("n_jobs", self.n_jobs),
+        param_values = [("n_clusters", self.n_clusters), ("n_jobs", self.n_jobs),
                         ("n_init", self.n_init), ("max_iter", self.max_iter),
                         ("tol", self.tol), ("random_state", self.random_state),
                         ("uniform_prior", self.uniform_prior), ("inv_beta", self.inv_beta),
@@ -176,7 +176,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         seeds = random_state.randint(np.iinfo(np.int32).max, size=self.n_init)
         if effective_n_jobs(self.n_jobs) == 1 or self.n_init == 1:
             # For a single thread, less memory is needed if we just store one set
-            # of the best results (as opposed to one set per run per thread).
+            # of the best results (as opposed to one set per run for each thread).
             best_partition = None
             for i, seed in enumerate(seeds):
                 # run sib once
@@ -240,7 +240,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
         partition = Partition(self.n_samples, self.n_features, self.n_clusters,
                               self.xy, self.x_sum, self.xy_sum, self.xy_log_sum,
                               self.hy, self.x_nz_indices, random_state,
-                              optimizer, v_optimizer)
+                              optimizer, self.sparse, v_optimizer)
 
         # main loop of optimizing the partition
         self.report_status(partition, job_id, run_id)
@@ -305,18 +305,26 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
         partition.change_ratio, partition.ity, partition.ht = optimizer.optimize(
             x_permutation, partition.t_size, partition.t_sum, partition.t_log_sum,
-            partition.t_centroid, partition.labels, partition.locked_in, partition.ity)
+            partition.t_centroid, partition.t_centroid_log_t_centroid,
+            partition.t_centroid_log_t_centroid_sum,
+            partition.labels, partition.locked_in, partition.ity)
 
         if v_optimizer:
+            # labels_ref = partition.labels
+            labels_ref = None
             v_partition.change_ratio, v_partition.ity, v_partition.ht = v_optimizer.optimize(
                 x_permutation, v_partition.t_size, v_partition.t_sum, v_partition.t_log_sum,
-                v_partition.t_centroid, v_partition.labels, partition.locked_in, v_partition.ity)
+                v_partition.t_centroid, v_partition.t_centroid_log_t_centroid,
+                v_partition.t_centroid_log_t_centroid_sum,
+                v_partition.labels, partition.locked_in, v_partition.ity, labels_ref)
             assert np.allclose(partition.labels, v_partition.labels)
             assert np.allclose(partition.locked_in, v_partition.locked_in)
             assert np.allclose(partition.change_ratio, v_partition.change_ratio)
             assert np.allclose(partition.t_sum, v_partition.t_sum)
             assert np.allclose(partition.t_log_sum, v_partition.t_log_sum)
             assert np.allclose(partition.t_centroid, v_partition.t_centroid)
+            assert np.allclose(partition.t_centroid_log_t_centroid, v_partition.t_centroid_log_t_centroid)
+            assert np.allclose(partition.t_centroid_log_t_centroid_sum, v_partition.t_centroid_log_t_centroid_sum)
             assert np.allclose(partition.t_size, v_partition.t_size)
             assert np.allclose(partition.ity, v_partition.ity)
             assert np.allclose(partition.ht, v_partition.ht)
@@ -362,6 +370,8 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
                                 self.partition_.t_sum,
                                 self.partition_.t_log_sum,
                                 self.partition_.t_centroid,
+                                self.partition_.t_centroid_log_t_centroid,
+                                self.partition_.t_centroid_log_t_centroid_sum,
                                 labels, locked_in, costs)
         labels[locked_in] = default_labels
         return labels, costs, score
@@ -500,7 +510,7 @@ class SIB(BaseEstimator, ClusterMixin, TransformerMixin):
 
 class Partition:
     def __init__(self, n_samples, n_features, n_clusters, xy, x_sum, xy_sum,
-                 xy_log_sum, hy, x_nz_indices, random_state, optimizer, v_optimizer):
+                 xy_log_sum, hy, x_nz_indices, random_state, optimizer, sparse, v_optimizer):
         # Produce a random partition as an initialization point
         self.labels = random_state.permutation(np.linspace(0, n_clusters, n_samples,
                                                            endpoint=False).astype(np.int32))
@@ -509,16 +519,21 @@ class Partition:
         self.locked_in = np.invert(x_nz_indices)
 
         # initialize the data structures based on the labels and the joint distribution
-        self.t_size, self.t_sum, self.t_log_sum, self.t_centroid = \
+        self.t_size, self.t_sum, self.t_log_sum, self.t_centroid, \
+            self.t_centroid_log_t_centroid, self.t_centroid_log_t_centroid_sum = \
             self.init_centroids(n_features, n_clusters, xy, x_sum, optimizer)
 
         if v_optimizer is not None:
-            v_t_size, v_t_sum, v_t_log_sum, v_t_centroid = \
+            v_t_size, v_t_sum, v_t_log_sum, v_t_centroid, \
+                v_t_centroid_log_t_centroid, v_t_centroid_log_t_centroid_sum = \
                 self.init_centroids(n_features, n_clusters, xy, x_sum, v_optimizer)
             assert np.allclose(self.t_size, v_t_size)
             assert np.allclose(self.t_sum, v_t_sum)
             assert np.allclose(self.t_log_sum, v_t_log_sum)
             assert np.allclose(self.t_centroid, v_t_centroid)
+            assert np.allclose(self.t_centroid_log_t_centroid, v_t_centroid_log_t_centroid)
+            if not sparse:
+                assert np.allclose(self.t_centroid_log_t_centroid_sum, v_t_centroid_log_t_centroid_sum)
 
         # calculate information
         t_centroid = self.t_centroid[np.nonzero(self.t_centroid)]
@@ -544,5 +559,8 @@ class Partition:
         t_sum = np.zeros(n_clusters, dtype=x_sum.dtype)
         t_log_sum = np.empty(n_clusters, dtype=np.float64)
         t_centroid = np.zeros((n_clusters, n_features), dtype=xy.dtype)
-        optimizer.init_centroids(self.labels, self.locked_in, t_size, t_sum, t_log_sum, t_centroid)
-        return t_size, t_sum, t_log_sum, t_centroid
+        t_centroid_log_t_centroid = np.empty((n_clusters, n_features), dtype=np.float64)
+        t_centroid_log_t_centroid_sum = np.empty(n_clusters, dtype=np.float64)
+        optimizer.init_centroids(self.labels, self.locked_in, t_size, t_sum, t_log_sum, t_centroid,
+                                 t_centroid_log_t_centroid, t_centroid_log_t_centroid_sum)
+        return t_size, t_sum, t_log_sum, t_centroid, t_centroid_log_t_centroid, t_centroid_log_t_centroid_sum
