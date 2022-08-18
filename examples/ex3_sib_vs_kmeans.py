@@ -5,14 +5,17 @@ from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 from eval_datasets import fetch_20ng, fetch_bbc_news, fetch_dbpedia, fetch_ag_news, fetch_yahoo_answers
+from ex_workflow import ExampleWorkflow
 from vectorizers import GloveVectorizer, SBertVectorizer
 
 # random seed for deterministic results
 random.seed(1024)
 
-# determine the number of runs per algorithm and the number of random inits per run
+# example name
+EX_NAME = 'ex3'
+
+# determine the number of runs per algorithm
 N_RUNS = 10
-N_INIT = 10
 
 # the datasets to use: {short name: (full name, retriever)}
 DATASETS = {
@@ -48,9 +51,13 @@ SETUPS = [
 
 DATASET_MAX_SIZE = None
 
-HIDDEN_PARAMS = ['n_clusters']
-
-EX_NAME = 'ex3'
-
 ALGORITHM_VIEW_ORDER = ['kmeans', 'sib']
 EMBEDDING_VIEW_ORDER = ['tf', 'tfidf', 'glove', 'sbert']
+
+workflow = ExampleWorkflow(ex_name=EX_NAME, datasets=DATASETS, embeddings=EMBEDDINGS,
+                           algorithms=ALGORITHMS, setups=SETUPS, dataset_max_size=DATASET_MAX_SIZE, n_runs=N_RUNS,
+                           algorithm_view_order=ALGORITHM_VIEW_ORDER, embedding_view_order=EMBEDDING_VIEW_ORDER)
+
+workflow.prepare()
+workflow.cluster()
+workflow.evaluate()
