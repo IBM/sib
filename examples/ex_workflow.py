@@ -27,7 +27,7 @@ tqdm.pandas()
 class ExampleWorkflow:
 
     def __init__(self, ex_name, datasets, embeddings, algorithms, setups, dataset_max_size,
-                 n_runs, algorithm_view_order, embedding_view_order):
+                 n_runs, algorithm_view_order, embedding_view_order, seed):
         self.ex_name = ex_name
         self.datasets = datasets
         self.embeddings = embeddings
@@ -42,7 +42,8 @@ class ExampleWorkflow:
             self.metrics_full_path, self.aggregated_full_path, \
             self.tables_full_path, self.figures_full_path, self.hardware_path = get_paths(ex_name)
         self.n_runs = n_runs
-        self.hidden_params = ['n_clusters']
+        self.hidden_params = ['n_clusters', 'random_state']
+        self.run_seeds = np.random.RandomState(seed).randint(np.iinfo(np.int32).max, size=n_runs)
 
     def prepare_dirs_model(self):
         os.makedirs(os.path.join(self.datasets_full_path), exist_ok=True)
@@ -65,8 +66,17 @@ class ExampleWorkflow:
                 'embedding': embedding_display_name
             })
 
+        # create a dataframe
+        df = pd.DataFrame(data)
+
+        # append to previous runs if exist
+        if os.path.exists(self.setups_metadata_full_path):
+            df_prev = pd.read_csv(self.setups_metadata_full_path)
+            df_prev.drop(df_prev.filter(regex="Unnamed"), axis=1, inplace=True)
+            df = pd.concat([df_prev, df], ignore_index=True)
+
         # store the metadata of the setups
-        pd.DataFrame(data).to_csv(self.setups_metadata_full_path)
+        df.to_csv(self.setups_metadata_full_path)
 
     def read_datasets(self):
         data = []
@@ -197,6 +207,7 @@ class ExampleWorkflow:
                     for algorithm_kwargs in algorithm_kwargs_list:
                         with tqdm(range(self.n_runs), file=sys.stdout) as t:
                             for i in t:
+                                algorithm_kwargs['random_state'] = self.run_seeds[i]
                                 algorithm_display_params = algorithm_kwargs.copy()
                                 for param in self.hidden_params:
                                     algorithm_display_params.pop(param, None)
@@ -222,7 +233,17 @@ class ExampleWorkflow:
                                     'gold_labels': dataset.target.tolist()
                                 })
 
-            pd.DataFrame(results).to_csv(self.predictions_full_path)
+        # create a dataframe
+        df = pd.DataFrame(results)
+
+        # append to previous runs if exist
+        if os.path.exists(self.predictions_full_path):
+            df_prev = pd.read_csv(self.predictions_full_path)
+            df_prev.drop(df_prev.filter(regex="Unnamed"), axis=1, inplace=True)
+            df = pd.concat([df_prev, df], ignore_index=True)
+
+        # store the metadata of the setups
+        df.to_csv(self.predictions_full_path)
 
     @classmethod
     def classification_scores(cls, row):
@@ -381,7 +402,8 @@ class ExampleWorkflow:
                                    color=colors[setup_id % len(colors)])
 
                     if log_scale:
-                        rotate = df_setup['vectorizer_name'].iloc[0] != self.embeddings['sbert'][0]
+                        rotate = df_setup['vectorizer_name'].iloc[0] != self.embeddings['sbert'][0] \
+                            if 'sbert' in self.embeddings else True
                         self.autolabel(ax, rects, rotate)
 
                 ax.set_title(title, fontsize=14)
@@ -572,12 +594,12 @@ class ExampleWorkflow:
 
     def prepare(self):
         self.prepare_dirs_model()
-        self.record_setups()
         self.read_datasets()
         self.vectorize()
         self.record_hardware()
 
     def cluster(self):
+        self.record_setups()
         self.cluster_setups()
 
     def evaluate(self):
