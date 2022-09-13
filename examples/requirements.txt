@@ -10,3 +10,4 @@ datasets
 wget
 sentence_transformers
 psutil
+umap

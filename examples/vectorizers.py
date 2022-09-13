@@ -13,11 +13,16 @@ from sentence_transformers import SentenceTransformer
 
 class SBertVectorizer:
 
-    def __init__(self):
-        self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
+    def __init__(self, model_name='all-MiniLM-L6-v2'):
+        self.encoder = SentenceTransformer(model_name)
 
     def fit_transform(self, texts):
         return self.encoder.encode(texts)
+
+
+class SBertHQVectorizer(SBertVectorizer):
+    def __init__(self):
+        super().__init__("all-mpnet-base-v2")
 
 
 GLOVE_MODEL = 'glove.840B.300d'
