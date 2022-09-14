@@ -392,7 +392,7 @@ class ExampleWorkflow:
                     ax.set_yticks([])
 
                 for setup_id, (_, df_setup) in enumerate(setup_groups):
-                    df_setup = df_setup.sort_values(by=['stop_words']).reset_index(drop=True)
+                    # df_setup = df_setup.sort_values(by=['stop_words']).reset_index(drop=True)
                     mean_values = df_setup[measure]
                     ci_values = df_setup[[measure + '_low', measure + '_high']].T
                     error_bar = (ci_values - mean_values).abs()

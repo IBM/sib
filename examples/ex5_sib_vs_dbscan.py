@@ -20,11 +20,11 @@ N_RUNS = 2
 
 # the datasets to use: {short name: (full name, retriever)}
 DATASETS = {
-    '20ng':     ('20 News Groups', fetch_20ng),
-    'dbpedia':  ('DBPedia',        fetch_dbpedia),
+    # '20ng':     ('20 News Groups', fetch_20ng),
+    # 'dbpedia':  ('DBPedia',        fetch_dbpedia),
     'bbc_news': ('BBC News',       fetch_bbc_news),
-    'ag_news':  ('AG NEWS',        fetch_ag_news),
-    'yahoo':    ('Yahoo! Answers', fetch_yahoo_answers)
+    # 'ag_news':  ('AG NEWS',        fetch_ag_news),
+    # 'yahoo':    ('Yahoo! Answers', fetch_yahoo_answers)
 }
 
 # the text vectorizers to use: {short name: (name, factory, optional params)}
@@ -52,8 +52,8 @@ SETUPS = [
 
 DATASET_MAX_SIZE = None
 
-ALGORITHM_VIEW_ORDER = ['kmeans', 'elron', 'sib']
-EMBEDDING_VIEW_ORDER = ['tf', 'tfidf', 'glove', 'sbert', 'sbert_hq']
+ALGORITHM_VIEW_ORDER = ['kmeans', 'dbscan', 'sib']
+EMBEDDING_VIEW_ORDER = ['tf', 'sbert', 'sbert_hq']
 
 workflow = ExampleWorkflow(ex_name=EX_NAME, datasets=DATASETS, embeddings=EMBEDDINGS,
                            algorithms=ALGORITHMS, setups=SETUPS, dataset_max_size=DATASET_MAX_SIZE, n_runs=N_RUNS,
