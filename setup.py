@@ -66,5 +66,5 @@ setup(
         'Intended Audience :: Developers',
     ],
     install_requires=install_requires,
-    python_requires='>=3.8, <=3.11',
+    python_requires='>=3.8',
 )
