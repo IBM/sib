@@ -18,7 +18,7 @@ setups = {
                       'tol': 0.05, 'uniform': True, 'sparse': True, 'opt': 'B'},
     'n_init':        {'n_cls': n_cls, 'n_jobs': 1, 'n_init': 8, 'max_iter': 8,
                       'tol': 0.05, 'uniform': True, 'sparse': True, 'opt': 'C'},
-    'n_jobs':        {'n_cls': n_cls, 'n_jobs': 2, 'n_init': 8, 'max_iter': 8,
+    'n_jobs':        {'n_cls': n_cls, 'n_jobs': -1, 'n_init': 8, 'max_iter': 8,
                       'tol': 0.05, 'uniform': True, 'sparse': True, 'opt': 'C'},
     'max_iter':      {'n_cls': n_cls, 'n_jobs': 1, 'n_init': 1, 'max_iter': 3,
                       'tol': 0.02, 'uniform': True, 'sparse': True, 'opt': 'C'},
