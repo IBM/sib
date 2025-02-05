@@ -61,7 +61,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: dist/*.tar.gz
-          name: ${{ matrix.os }}
+          name: ubuntu-latest
 
   upload_pypi:
     name: Upload to PyPI
@@ -74,7 +74,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.os }}
+          name: ubuntu-latest
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@v1.5.0
