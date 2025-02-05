@@ -47,6 +47,7 @@ jobs:
         with:
           path: ./wheelhouse/*.whl
           name: ${{ matrix.os }}
+          
 
   build_sdist:
     name: Build source distribution
@@ -60,6 +61,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: dist/*.tar.gz
+          name: ${{ matrix.os }}
 
   upload_pypi:
     name: Upload to PyPI
@@ -72,7 +74,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: artifact
+          name: ${{ matrix.os }}
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@v1.5.0
