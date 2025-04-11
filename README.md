@@ -101,7 +101,7 @@ If you would like to see the detailed LICENSE click [here](LICENSE).
 - Optimization work: Assaf Toledo and Elad Venezian
 - Development and maintenance: [Assaf Toledo](https://github.com/assaftibm)
 
-
+ 
 <!-- Questions can be useful but optional, this gives you a place to say, "This is how to contact this project maintainers or create PRs -->
 If you have any questions or issues you can create a new [issue here][issues].
 
@@ -112,3 +112,4 @@ https://dl.acm.org/doi/abs/10.1145/564376.564401
 
 [issues]: https://github.com/IBM/sib/issues/new
 [sklearn]: https://scikit-learn.org
+
