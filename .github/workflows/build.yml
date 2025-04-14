@@ -28,8 +28,6 @@ jobs:
       matrix:
         os: [ubuntu, windows, macos]
         include:
-          - archs: auto
-            platform: auto
 	  - os: ubuntu
             runs-on: ubuntu-20.04
           - os: windows
