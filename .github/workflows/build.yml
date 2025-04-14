@@ -26,14 +26,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu, windows, macos]
-        include:
-	  - os: ubuntu
-            runs-on: ubuntu-20.04
-          - os: windows
-            runs-on windows-latest
-          - os: macOS-intel
-            runs-on: macos-13
+        os: [ubuntu-20.04, windows-latest, macos-13]
     env:
       CIBW_TEST_REQUIRES: pytest
       CIBW_TEST_COMMAND: "pytest {project}/tests"
