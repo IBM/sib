@@ -51,6 +51,8 @@ jobs:
           CIBW_PLATFORM: ${{ matrix.platform }}
           CIBW_ARCHS: ${{ matrix.archs }}
           CIBW_SKIP: pp* *-musllinux_*
+        with:
+          output-dir: dist
 
       - uses: actions/upload-artifact@v4
         with:
