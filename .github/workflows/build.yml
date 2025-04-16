@@ -28,8 +28,6 @@ jobs:
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-intel, macos-arm]
         include:
-          - archs: auto
-            platform: auto
           - os: ubuntu-22.04
             runs-on: ubuntu-22.04
           - os: windows-latest
@@ -48,8 +46,9 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.23.2
         env:
-          CIBW_PLATFORM: ${{ matrix.platform }}
-          CIBW_ARCHS: ${{ matrix.archs }}
+          CIBW_ARCHS_MACOS: x86_64 arm64 universal2
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_WINDOWS: AMD64
           CIBW_SKIP: pp* *-musllinux_*
         with:
           output-dir: dist
