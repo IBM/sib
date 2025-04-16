@@ -23,10 +23,21 @@ on:
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os.runs-on }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-13]
+        os: [ubuntu-22.04, windows-latest, macos-intel, macos-arm]
+        include:
+          - archs: auto
+            platform: auto
+          - os: ubuntu-22.04
+            runs-on: ubuntu-22.04
+          - os: windows-latest
+            runs-on: windows-latest
+          - os: macos-intel
+            runs-on: macos-13
+          - os: macos-arm
+            runs-on: macos-latest
     env:
       CIBW_TEST_REQUIRES: pytest
       CIBW_TEST_COMMAND: "pytest {project}/tests"
@@ -37,15 +48,13 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.23.2
         env:
-          CIBW_ARCHS_MACOS: x86_64 arm64 universal2
-          CIBW_ARCHS_LINUX: x86_64
-          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_PLATFORM: ${{ matrix.platform }}
+          CIBW_ARCHS: ${{ matrix.archs }}
           CIBW_SKIP: pp* *-musllinux_*
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}
-          path: ./wheelhouse/*.whl
+          path: dist/*.tar.gz
           
   build_sdist:
     name: Build source distribution
@@ -72,6 +81,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          pattern: *.tar.gz 
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@release/v1
