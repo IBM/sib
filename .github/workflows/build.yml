@@ -58,7 +58,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheel--${{ matrix.os }}
+          name: artifact--${{ matrix.os }}
           path: dist/*.tar.gz
 
   upload_pypi:
@@ -72,7 +72,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: artifact
+          name: artifact--${{ matrix.os }}
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@v1.12.4
