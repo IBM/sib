@@ -58,7 +58,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact--${{ matrix.os }}
+          name: artifact--${{ matrix.os }}-${{ matrix.python-version }}
           path: dist/*.tar.gz
 
   upload_pypi:
