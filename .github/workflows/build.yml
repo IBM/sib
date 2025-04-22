@@ -72,7 +72,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: artifact--${{ matrix.os }}
+          name: artifact--${{ matrix.os }}-${{ matrix.python-version }}
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@v1.12.4
