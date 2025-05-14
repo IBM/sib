@@ -29,16 +29,8 @@ jobs:
       run_number: ${{ github.run_number }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-intel, macos-arm]
-        include:
-          - os: ubuntu-22.04
-            runs-on: ubuntu-22.04
-          - os: windows-latest
-            runs-on: windows-latest
-          - os: macos-intel
-            runs-on: macos-13
-          - os: macos-arm
-            runs-on: macos-latest
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+
     env:
       CIBW_TEST_REQUIRES: pytest
       CIBW_TEST_COMMAND: "pytest {project}/tests"
@@ -53,8 +45,6 @@ jobs:
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_SKIP: pp* *-musllinux_*
-        with:
-          output-dir: dist
 
       - uses: actions/upload-artifact@v4
         with:
@@ -89,7 +79,7 @@ jobs:
           name: ${{ matrix.os }}
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           user: __token__
           password: ${{ secrets.pypi_password }}
