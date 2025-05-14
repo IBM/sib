@@ -23,7 +23,7 @@ on:
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: ${{ matrix.os }}
     outputs:
       os: ${{ matrix.os }}
     strategy:
