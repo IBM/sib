@@ -47,7 +47,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}
+          name: sib-clustering-release-bdist-${{ matrix.os }}
           path: ./wheelhouse/*.whl
           
   build_sdist:
@@ -61,7 +61,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: sib_clustering
+          name: sib-clustering-release-src-${{ matrix.os }}
           path: dist/*.tar.gz 
 
   upload_wheels_to_pypi:
@@ -75,7 +75,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.build_wheels.outputs.os }}
+          pattern: sib-clustering-release-*
+          path: dist
+          merge-multiple: true
 
       - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
@@ -83,22 +85,3 @@ jobs:
           password: ${{ secrets.pypi_password }}
           # password: ${{ secrets.test_pypi_password }}
           # repository_url: https://test.pypi.org/legacy/
-
-  upload_sdist_to_pypi:
-    name: Upload sdist to PyPI
-    needs: [build_sdist]
-    runs-on: ubuntu-latest
-    # upload to PyPI on every tag starting with 'v'
-    # if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
-    # alternatively, to publish when a GitHub Release is created, use the following rule:
-    if: github.event_name == 'release' && github.event.action == 'published'
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: sib_clustering
-          path: dist
-
-      - uses: pypa/gh-action-pypi-publish@v1.12.4
-        with:
-          user: __token__
-          password: ${{ secrets.pypi_password }}
