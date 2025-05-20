@@ -22,13 +22,13 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.runs-on }}
-    runs-on: ${{ matrix.runs-on }}
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     outputs:
-      os: ${{ matrix.runs-on }}
+      os: ${{ matrix.os }}
     strategy:
       matrix:
-        runs-on: [ubuntu-22.04, windows-latest, macos-latest]
+        os: [ubuntu-22.04, windows-latest, macos-latest]
 
     env:
       CIBW_TEST_REQUIRES: pytest
@@ -47,7 +47,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: sib-clustering-release-bdist-${{ matrix.runs-on }}
+          name: sib-clustering-release-bdist-${{ matrix.os }}
           path: ./wheelhouse/*.whl
           
   build_sdist:
@@ -61,7 +61,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: sib-clustering-release-src-${{ matrix.runs-on }}
+          name: sib-clustering-release-src-${{ matrix.os }}
           path: dist/*.tar.gz 
 
   upload_to_pypi:
