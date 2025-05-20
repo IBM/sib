@@ -2,5 +2,5 @@
 requires = ["setuptools", "setuptools-scm", "wheel", "Cython"]
 
 [tool.setuptools_scm]
-write_to = sib/_version.py
+write_to = "sib/_version.py"
 local_scheme = "no-local-version"
