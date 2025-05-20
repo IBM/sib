@@ -22,13 +22,13 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Build wheels on ${{ matrix.runs-on }}
+    runs-on: ${{ matrix.runs-on }}
     outputs:
-      os: ${{ matrix.os }}
+      os: ${{ matrix.runs-on }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-latest]
+        runs-on: [ubuntu-22.04, windows-latest, macos-latest]
 
     env:
       CIBW_TEST_REQUIRES: pytest
@@ -47,7 +47,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: sib-clustering-release-bdist-${{ matrix.os }}
+          name: sib-clustering-release-bdist-${{ matrix.runs-on }}
           path: ./wheelhouse/*.whl
           
   build_sdist:
@@ -61,12 +61,12 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: sib-clustering-release-src-${{ matrix.os }}
+          name: sib-clustering-release-src-${{ matrix.runs-on }}
           path: dist/*.tar.gz 
 
-  upload_wheels_to_pypi:
+  upload_to_pypi:
     name: Upload wheels to PyPI
-    needs: [build_wheels]
+    needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     # upload to PyPI on every tag starting with 'v'
     # if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
@@ -81,6 +81,8 @@ jobs:
 
       - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
+          skip-existing: true
+          verbose: true
           user: __token__
           password: ${{ secrets.pypi_password }}
           # password: ${{ secrets.test_pypi_password }}
