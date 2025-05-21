@@ -64,7 +64,30 @@ jobs:
           name: sib-clustering-release-src
           path: dist/*.tar.gz 
 
-  upload_to_pypi:
+
+  publish-to-testpypi:
+      name: Publish to TestPyPI
+      if: ((github.event_name == 'push') && (github.ref == 'refs/heads/main'))
+      needs: [build_wheels, build_sdist]
+      runs-on: ubuntu-latest
+
+      permissions:
+        contents: read
+        id-token: write  
+
+      steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
+        with:
+          name: sib-clustering-release-*
+          path: dist/
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.test_pypi_password }}
+          repository-url: https://test.pypi.org/legacy/
+
+  publish_to_pypi:
     name: Upload wheels to PyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
@@ -76,12 +99,10 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: sib-clustering-release-*
-          path: dist
+          path: dist/
 
       - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           verbose: true
           user: __token__
           password: ${{ secrets.pypi_password }}
-          # password: ${{ secrets.test_pypi_password }}
-          # repository_url: https://test.pypi.org/legacy/
