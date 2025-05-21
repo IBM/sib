@@ -78,7 +78,6 @@ jobs:
       - name: Download all the dists
         uses: actions/download-artifact@v4
         with:
-          pattern: sib-clustering-release-*
           path: dist
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -97,7 +96,6 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: sib-clustering-release-*
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@v1.12.4
