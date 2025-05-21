@@ -61,13 +61,12 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: sib-clustering-release-src
           path: dist/*.tar.gz 
 
 
   publish-to-testpypi:
       name: Publish to TestPyPI
-      if: ((github.event_name == 'push') && (github.ref == 'refs/heads/main'))
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       needs: [build_wheels, build_sdist]
       runs-on: ubuntu-latest
 
@@ -80,7 +79,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: sib-clustering-release-*
-          path: dist/
+          path: dist
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -99,7 +98,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: sib-clustering-release-*
-          path: dist/
+          path: dist
 
       - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
