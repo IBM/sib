@@ -79,6 +79,7 @@ jobs:
       - name: Download all the dists
         uses: actions/download-artifact@v4
         with:
+          path: dist
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Publish to TestPyPI
@@ -98,6 +99,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          path: dist
           run-id: ${{ github.event.workflow_run.id }}
       - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
