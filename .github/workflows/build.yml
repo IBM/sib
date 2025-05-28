@@ -80,7 +80,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: sib-clustering-release-*
-          path: dist/
+          path: dist/*
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Publish to TestPyPI
@@ -101,7 +101,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: sib-clustering-release-*
-          path: dist/
+          path: dist/*
           run-id: ${{ github.event.workflow_run.id }}
       - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
