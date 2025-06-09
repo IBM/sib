@@ -74,8 +74,9 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
-        name: python-package-distributions
-        path: dist/
+        path: dist
+        pattern: sib-clustering-*
+        merge-multiple: true
     - name: Publish distribution to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
@@ -94,7 +95,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
-          pattern: ibmdb-*
+          pattern: sib-clustering-*
           merge-multiple: true
 
       - uses: pypa/gh-action-pypi-publish@v1.12.4
