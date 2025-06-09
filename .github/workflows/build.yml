@@ -24,73 +24,44 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    outputs:
-      os: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-latest]
+        os: [ubuntu-20.04, windows-latest, macos-latest]
 
     env:
       CIBW_TEST_REQUIRES: pytest
       CIBW_TEST_COMMAND: "pytest {project}/tests"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.2
+        uses: pypa/cibuildwheel@v2.9.0
         env:
           CIBW_ARCHS_MACOS: x86_64 arm64 universal2
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_SKIP: pp* *-musllinux_*
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
-          name: sib-clustering-release-bdist-${{ matrix.os }}
           path: ./wheelhouse/*.whl
-          
+
   build_sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Build sdist
         run: pipx run build --sdist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
-          name: sib-clustering-release-sdist
-          path: dist/*.tar.gz 
+          path: dist/*.tar.gz
 
-
-  publish-to-testpypi:
-      name: Publish to TestPyPI
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      needs: [build_wheels, build_sdist]
-      runs-on: ubuntu-latest
-
-      permissions:
-        contents: read
-        id-token: write  
-
-      steps:
-      - name: Download all the dists
-        uses: actions/download-artifact@v4
-        with:
-          pattern: sib-clustering-release-*
-          path: dist
-          merge-multiple: true
-
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.test_pypi_password }}
-          repository-url: https://test.pypi.org/legacy/
-
-  publish_to_pypi:
-    name: Upload wheels to PyPI
+  upload_pypi:
+    name: Upload to PyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     # upload to PyPI on every tag starting with 'v'
@@ -98,13 +69,14 @@ jobs:
     # alternatively, to publish when a GitHub Release is created, use the following rule:
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
-          pattern: sib-clustering-release-*
+          name: artifact
           path: dist
-          merge-multiple: true
-      - uses: pypa/gh-action-pypi-publish@v1.12.4
+
+      - uses: pypa/gh-action-pypi-publish@v1.5.0
         with:
-          verbose: true
           user: __token__
           password: ${{ secrets.pypi_password }}
+          # password: ${{ secrets.test_pypi_password }}
+          # repository_url: https://test.pypi.org/legacy/
