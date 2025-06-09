@@ -83,6 +83,7 @@ jobs:
       with:
         repository-url: https://test.pypi.org/legacy/
         password: ${{ secrets.test_pypi_password }}
+        verbose: true
 
   upload_pypi:
     name: Upload to PyPI
