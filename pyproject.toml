@@ -1,6 +1,2 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm", "wheel", "Cython"]
-
-[tool.setuptools_scm]
-write_to = "src/sib/_version.py"
-local_scheme = "no-local-version"
+requires = ["setuptools", "wheel", "Cython"]
