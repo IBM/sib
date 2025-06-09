@@ -26,7 +26,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-latest, macos-latest]
+        os: [ubuntu-22.04, windows-latest, macos-latest]
 
     env:
       CIBW_TEST_REQUIRES: pytest
@@ -45,6 +45,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: sib-clustering-wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -58,7 +59,30 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: sib-clustering-sdist
           path: dist/*.tar.gz
+
+  publish-to-testpypi:
+    name: Publish Python distribution to TestPyPI
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    # GitHub does not mint OIDC tokens for pull requests on forks.
+    if: github.event.pull_request.head.repo.fork != true
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        path: dist
+        pattern: sib-clustering-*
+        merge-multiple: true
+    - name: Publish distribution to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        password: ${{ secrets.test_pypi_password }}
 
   upload_pypi:
     name: Upload to PyPI
@@ -71,12 +95,11 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: artifact
           path: dist
+          pattern: sib-clustering-*
+          merge-multiple: true
 
       - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           user: __token__
           password: ${{ secrets.pypi_password }}
-          # password: ${{ secrets.test_pypi_password }}
-          # repository_url: https://test.pypi.org/legacy/
