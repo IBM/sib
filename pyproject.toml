@@ -2,5 +2,5 @@
 requires = ["setuptools", "setuptools_scm", "wheel", "Cython"]
 
 [tool.setuptools_scm]
-version_file = "src/instructlab/schema/_version.py"
+version_file = "src/sib/_version.py"
 local_scheme = "no-local-version"   
