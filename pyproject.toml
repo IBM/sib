@@ -2,5 +2,7 @@
 requires = ["setuptools", "setuptools_scm", "wheel", "Cython"]
 
 [tool.setuptools_scm]
-version_file = "src/sib/_version.py"
-local_scheme = "no-local-version"   
+root = '.'
+version_scheme = 'guess-next-dev'
+git_describe_command = 'git describe --dirty --tags --long --match sib-clustering-*.*"'
+

@@ -93,6 +93,8 @@ jobs:
     # if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
     # alternatively, to publish when a GitHub Release is created, use the following rule:
     if: github.event_name == 'release' && github.event.action == 'published'
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
     steps:
       - uses: actions/download-artifact@v4
         with:
