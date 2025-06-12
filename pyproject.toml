@@ -4,5 +4,5 @@ requires = ["setuptools", "setuptools_scm", "wheel", "Cython"]
 [tool.setuptools_scm]
 root = '.'
 version_scheme = 'guess-next-dev'
-git_describe_command = 'git describe --dirty --tags --long --match sib-clustering-*.*"'
+git_describe_command = 'git describe --tags --match sib-clustering-*.*"'
 
