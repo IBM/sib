@@ -1,9 +1,2 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm>=8", "wheel", "Cython"]
-
-[tool.setuptools_scm]
-version_file = './src/sib/_version.py'
-version_scheme = 'python-simplified-semver'
-local_scheme = 'no-local-version'
-git_describe_command = 'git describe --tags --match sib-clustering-*.*"'
-
+requires = ["setuptools", "wheel", "Cython"]
