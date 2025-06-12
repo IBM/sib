@@ -1,6 +1,7 @@
 [build-system]
-requires = ["setuptools", "setuptools_scm", "wheel", "Cython"]
+requires = ["setuptools", "wheel", "Cython"]
 
-[tool.setuptools_scm]
-version_file = "src/sib/_version.py"
-local_scheme = "no-local-version"   
+[tool.setuptools.dynamic]
+# Gather version from file dynamically
+version = { file = ".version" }
+
