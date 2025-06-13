@@ -65,28 +65,28 @@ jobs:
           name: sib-clustering-sdist
           path: dist/*.tar.gz
 
-  publish-to-testpypi:
-    name: Publish Python distribution to TestPyPI
-    needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-latest
-    # GitHub does not mint OIDC tokens for pull requests on forks.
-    if: github.event.pull_request.head.repo.fork != true
-    permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+  # publish-to-testpypi:
+  #   name: Publish Python distribution to TestPyPI
+  #   needs: [build_wheels, build_sdist]
+  #   runs-on: ubuntu-latest
+  #   # GitHub does not mint OIDC tokens for pull requests on forks.
+  #   if: github.event.pull_request.head.repo.fork != true
+  #   permissions:
+  #     id-token: write  # IMPORTANT: mandatory for trusted publishing
 
-    steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v4
-      with:
-        path: dist
-        pattern: sib-clustering-*
-        merge-multiple: true
-    - name: Publish distribution to TestPyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        repository-url: https://test.pypi.org/legacy/
-        password: ${{ secrets.test_pypi_password }}
-        verbose: true
+  #   steps:
+  #   - name: Download all the dists
+  #     uses: actions/download-artifact@v4
+  #     with:
+  #       path: dist
+  #       pattern: sib-clustering-*
+  #       merge-multiple: true
+  #   - name: Publish distribution to TestPyPI
+  #     uses: pypa/gh-action-pypi-publish@release/v1
+  #     with:
+  #       repository-url: https://test.pypi.org/legacy/
+  #       password: ${{ secrets.test_pypi_password }}
+  #       verbose: true
 
   upload_pypi:
     name: Upload to PyPI
