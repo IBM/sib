@@ -44,7 +44,7 @@ jobs:
           CIBW_SKIP: pp* *-musllinux_*
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{github.event.release.tag_name}}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sib-clustering-wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
@@ -60,7 +60,7 @@ jobs:
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{github.event.release.tag_name}}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sib-clustering-sdist
           path: dist/*.tar.gz
@@ -99,7 +99,7 @@ jobs:
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           pattern: sib-clustering-*
